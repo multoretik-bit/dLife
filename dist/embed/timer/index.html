@@ -49,12 +49,38 @@
             <span class="eyebrow">ВРЕМЯ ДЛЯ РАЗВИТИЯ</span>
             <div id="timer-clock" class="timer-clock">00:00:00</div>
           </div>
-          <div class="timer-controls"><label class="coin-rate-label" for="timer-rate"><img src="/assets/coins.png" alt=""/> Монет за минуту <input id="timer-rate" type="number" min="0" max="1000000" value="1" step="0.01"/></label>
+          <div class="timer-controls">
+            <div class="timer-sphere-row">
+              <label class="timer-sphere-label" for="timer-sphere">
+                <i class="timer-sphere-dot" id="timer-sphere-dot"></i>
+                Сфера
+              </label>
+              <select id="timer-sphere">
+                <option value="1">Моя внешность</option>
+                <option value="2">Здоровье</option>
+                <option value="3">Отношения</option>
+                <option value="4">Семья</option>
+                <option value="5">Окружение</option>
+                <option value="6">Отдых</option>
+                <option value="7">Стремления</option>
+                <option value="8">Бизнес и работа</option>
+                <option value="9">Финансы</option>
+                <option value="10" selected>Учёба</option>
+              </select>
+            </div>
+            <div class="timer-preset-row" id="timer-presets">
+              <button type="button" class="timer-preset-chip is-study" data-sphere="10" data-minutes="30" title="30 минут учёбы">⚡ 30 мин (Учёба)</button>
+              <button type="button" class="timer-preset-chip" data-minutes="15">15 мин</button>
+              <button type="button" class="timer-preset-chip" data-minutes="30">30 мин</button>
+              <button type="button" class="timer-preset-chip" data-minutes="45">45 мин</button>
+            </div>
+            <label class="coin-rate-label" for="timer-rate"><img src="/assets/coins.png" alt=""/> Монет за минуту <input id="timer-rate" type="number" min="0" max="1000000" value="1" step="0.01"/></label>
             <p id="timer-caption">Каждая минута — в твою пользу.</p>
-            <button id="timer-toggle" class="add-block">Начать занятие</button
-            ><button id="manual-log" class="quiet-button">
-              ＋ Записать время
-            </button>
+            <div class="timer-actions-row">
+              <button id="timer-toggle" class="add-block">Начать занятие</button>
+              <button id="timer-reset" class="quiet-button timer-reset-btn" type="button">Сбросить</button>
+              <button id="manual-log" class="quiet-button">＋ Записать время</button>
+            </div>
           </div>
         </section>
         <section class="goals-overview">
@@ -143,6 +169,7 @@
         <p class="field-hint">Можно уточнить длительность перед сохранением.</p>
         <p id="session-error" role="alert"></p>
         <button class="add-block" type="submit">Засчитать время</button>
+        <button type="button" class="quiet-button" id="session-discard">Сбросить таймер без сохранения</button>
       </form>
     </dialog>
   </body>
