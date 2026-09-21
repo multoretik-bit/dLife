@@ -8,6 +8,7 @@
     <link rel="icon" href="/assets/favicon.svg" />
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/now.css" />
+    <link rel="stylesheet" href="/design.css" />
     <script type="module" src="/app.js"></script>
     <script type="module" src="/now.js"></script>
   </head>
@@ -22,8 +23,9 @@
             height="1024"
         /></a>
         <nav aria-label="Основная навигация">
-          <a href="/">Мой профиль</a
-          ><a class="nav-current" href="/now/" aria-current="page">Сейчас</a>
+          <a href="/">Профиль</a
+          ><a class="nav-current" href="/now/" aria-current="page">Сегодня</a>
+          <a href="/aspects/">Аспекты</a>
         </nav>
         <div class="header-actions">
           <button
@@ -64,43 +66,65 @@
           </button>
         </div>
       </header>
-      <main>
-        <section id="load-error" hidden class="load-error">
-          <p id="load-error-text"></p>
-          <button id="retry">Попробовать ещё раз</button>
-        </section>
-        <article class="now-card" id="now-card" hidden>
-          <div class="block-hero">
-            <div class="block-copy">
-              <div class="eyebrow" id="block-eyebrow"></div>
-              <h1 id="block-title"></h1>
-              <p class="block-meta">
-                <span id="block-time"></span
-                ><span class="sphere-tag"
-                  ><i></i><span id="block-sphere"></span
-                ></span>
-              </p>
-              <p class="remainder" id="block-remainder"></p>
-              <p id="rest-copy"></p>
-            </div>
-            <div class="art-orbit" aria-hidden="true"></div>
-            <div class="sphere-art" id="now-visual" aria-hidden="true"></div>
+      <main class="today-main">
+        <div class="page-heading">
+          <div>
+            <span class="date-label"></span>
+            <h2>Мой день<span>.</span></h2>
           </div>
-          <div class="block-items" id="block-items">
-            <section>
-              <h2>Привычки</h2>
-              <div id="habit-list"></div>
+          <button class="add-block" type="button">＋ Добавить блок</button>
+        </div>
+        <div class="day-layout">
+          <aside class="day-rail" aria-label="Расписание дня">
+            <div class="rail-caption">В ТВОЁМ РИТМЕ</div>
+            <div id="day-timeline"></div>
+          </aside>
+          <div class="day-content">
+            <section id="load-error" hidden class="load-error">
+              <p id="load-error-text"></p>
+              <button id="retry">Попробовать ещё раз</button>
             </section>
-            <section>
-              <h2>Задачи</h2>
-              <div id="task-list"></div>
-            </section>
+            <article class="now-card" id="now-card" hidden>
+              <div class="block-hero">
+                <div class="block-copy">
+                  <div class="eyebrow" id="block-eyebrow"></div>
+                  <h1 id="block-title"></h1>
+                  <p class="block-meta">
+                    <span id="block-time"></span
+                    ><span class="sphere-tag"
+                      ><i></i><span id="block-sphere"></span
+                    ></span>
+                  </p>
+                  <p class="remainder" id="block-remainder"></p>
+                  <p id="rest-copy"></p>
+                </div>
+                <div class="card-landscape" aria-hidden="true">
+                  <i></i><i></i><i></i>
+                </div>
+                <div class="abstract-mark" aria-hidden="true">✳</div>
+                <div
+                  class="sphere-art"
+                  id="now-visual"
+                  aria-hidden="true"
+                ></div>
+              </div>
+              <div class="block-items" id="block-items">
+                <section>
+                  <h2>Привычки</h2>
+                  <div id="habit-list"></div>
+                </section>
+                <section>
+                  <h2>Задачи</h2>
+                  <div id="task-list"></div>
+                </section>
+              </div>
+              <footer class="block-footer">
+                <span id="next-block"></span
+                ><button id="block-link">Ссылка на этот блок ↗</button>
+              </footer>
+            </article>
           </div>
-          <footer class="block-footer">
-            <span id="next-block"></span
-            ><button id="block-link">Ссылка на этот блок ↗</button>
-          </footer>
-        </article>
+        </div>
         <div id="notice" role="status" aria-live="polite"></div>
       </main>
     </div>

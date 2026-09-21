@@ -48,6 +48,18 @@ function render() {
   const card = $("#now-card");
   card.hidden = false;
   const unknown = selectedId && !block;
+  const timeline = $("#day-timeline");
+  if (timeline)
+    timeline.innerHTML = state.blocks.length
+      ? [...state.blocks]
+          .sort((a, b) => a.start.localeCompare(b.start))
+          .map(
+            (b) =>
+              `<a class="timeline-entry ${b.id === block?.id ? "is-current" : ""}" href="/blocks/now/?id=${encodeURIComponent(b.id)}" style="--entry-color:${sphereFor(b.sphereId).color}"><time>${b.start}</time><i></i><strong>${esc(b.name)}</strong><small>${b.end}</small></a>`,
+          )
+          .join("")
+      : '<div class="timeline-empty"><time>Сейчас</time><i></i><strong>Свободное время</strong><p>Твой день начинается<br>с первого блока.</p></div>';
+
   const sphere = sphereFor(block?.sphereId || "6");
   card.style.setProperty("--sphere", sphere.color);
   card.classList.toggle("is-rest", !block);
@@ -315,3 +327,9 @@ document.addEventListener("visibilitychange", () => {
   if (!document.hidden && !busy && !$("#settings-dialog").open) load();
 });
 load();
+
+document
+  .querySelector(".add-block")
+  ?.addEventListener("click", () =>
+    document.querySelector("#settings").click(),
+  );

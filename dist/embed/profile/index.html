@@ -9,6 +9,7 @@
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/now.css" />
+    <link rel="stylesheet" href="/design.css" />
     <script type="module" src="/app.js"></script>
   </head>
   <body>
@@ -22,8 +23,8 @@
             height="1024"
         /></a>
         <nav aria-label="Основная навигация">
-          <a class="nav-current" href="/" aria-current="page">Мой профиль</a
-          ><a href="/now/">Сейчас</a>
+          <a class="nav-current" href="/" aria-current="page">Профиль</a
+          ><a href="/now/">Сегодня</a> <a href="/aspects/">Аспекты</a>
         </nav>
         <button
           class="share"
@@ -44,7 +45,10 @@
           </svg>
         </button>
       </header>
-      <main>
+      <main class="profile-main">
+        <div class="page-heading">
+          <span>МОЁ ПРОСТРАНСТВО</span><span class="date-label"></span>
+        </div>
         <article class="profile" aria-label="Профиль Дениса">
           <div
             class="portrait"
@@ -68,7 +72,8 @@
               <span id="life-day">—</span><span class="day-word">день.</span>
             </p>
           </div>
-          <div class="profile-art" aria-hidden="true"></div>
+          <div class="abstract-mark" aria-hidden="true">✳</div>
+          <div class="profile-lines" aria-hidden="true"></div>
           <button
             class="motion"
             id="motion"

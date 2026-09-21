@@ -4,13 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#174c6c" />
-    <title>dLife — Мой профиль</title>
+    <title>dLife — Аспекты</title>
     <meta name="description" content="Личное пространство Дениса." />
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/now.css" />
     <link rel="stylesheet" href="/design.css" />
     <script type="module" src="/app.js"></script>
+    <script type="module" src="/aspects.js"></script>
   </head>
   <body>
     <div class="workspace">
@@ -23,8 +24,10 @@
             height="1024"
         /></a>
         <nav aria-label="Основная навигация">
-          <a class="nav-current" href="/" aria-current="page">Профиль</a
-          ><a href="/now/">Сегодня</a> <a href="/aspects/">Аспекты</a>
+          <a href="/">Профиль</a><a href="/now/">Сегодня</a>
+          <a class="nav-current" aria-current="page" href="/aspects/"
+            >Аспекты</a
+          >
         </nav>
         <button
           class="share"
@@ -45,51 +48,24 @@
           </svg>
         </button>
       </header>
-      <main class="profile-main">
-        <div class="page-heading">
-          <span>МОЁ ПРОСТРАНСТВО</span><span class="date-label"></span>
+      <main>
+        <div class="aspects-head">
+          <h1>Время для себя<span style="color: #178bce">.</span></h1>
+          <p>4 аспекта · 10 сфер жизни</p>
         </div>
-        <article class="profile" aria-label="Профиль Дениса">
-          <div
-            class="portrait"
-            id="portrait"
-            role="img"
-            aria-label="Персонаж Дениса смотрит на вас"
-          >
-            <div class="portrait-halo"></div>
-            <div class="portrait-image">
-              <img src="/assets/denis.png" alt="" aria-hidden="true" />
-            </div>
-          </div>
-          <div class="greeting">
-            <h1>
-              <span id="greeting">Доброе утро,</span><br /><span class="name"
-                >Денис.</span
-              >
-            </h1>
-            <p class="day-caption">Сегодня ваш</p>
-            <p class="day">
-              <span id="life-day">—</span><span class="day-word">день.</span>
-            </p>
-          </div>
-          <div class="abstract-mark" aria-hidden="true">✳</div>
-          <div class="profile-lines" aria-hidden="true"></div>
-          <button
-            class="motion"
-            id="motion"
-            aria-label="Приостановить анимацию"
-            aria-pressed="false"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.7"
-            >
-              <path d="M9 6v12M15 6v12" />
-            </svg>
+        <div class="aspect-tabs" role="tablist" aria-label="Аспекты жизни">
+          <button role="tab" aria-selected="true" data-aspect="0">
+            Физический</button
+          ><button role="tab" aria-selected="false" data-aspect="1">
+            Эмоциональный</button
+          ><button role="tab" aria-selected="false" data-aspect="2">
+            Духовный</button
+          ><button role="tab" aria-selected="false" data-aspect="3">
+            Ментальный
           </button>
-        </article>
+        </div>
+        <div class="sphere-grid" id="sphere-grid"></div>
+        <p class="aspects-foot" id="aspect-status">Загружаем расписание…</p>
       </main>
     </div>
     <dialog id="share-dialog">
@@ -97,9 +73,7 @@
         <button class="close" aria-label="Закрыть">×</button>
       </form>
       <h2>Ссылка на блок</h2>
-      <p>
-        Этот профиль можно открыть отдельно или вставить в Notion через /embed.
-      </p>
+      <p>Аспекты можно открыть отдельно или вставить в Notion через /embed.</p>
       <label for="embed-url">Для вставки в Notion</label>
       <div class="copy-row">
         <input id="embed-url" readonly /><button id="copy">Копировать</button>

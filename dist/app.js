@@ -17,14 +17,20 @@ document.addEventListener("visibilitychange", () => {
 const dialog = document.querySelector("#share-dialog");
 document.querySelector("#share").addEventListener("click", () => {
   document.querySelector("#embed-url").value = new URL(
-    location.pathname.includes("/now") ? "/embed/now/" : "/embed/profile/",
+    location.pathname.includes("/aspects")
+      ? "/embed/aspects/"
+      : location.pathname.includes("/now")
+        ? "/embed/now/"
+        : "/embed/profile/",
     location.origin,
   ).href;
   document.querySelector("#standalone").href = location.pathname.includes(
-    "/now",
+    "/aspects",
   )
-    ? "/blocks/now/"
-    : "/blocks/profile/";
+    ? "/blocks/aspects/"
+    : location.pathname.includes("/now")
+      ? "/blocks/now/"
+      : "/blocks/profile/";
   dialog.showModal();
 });
 dialog.addEventListener("click", (e) => {
@@ -62,3 +68,10 @@ if (document.querySelector("#portrait"))
     .catch(() => {
       document.querySelector("#motion").disabled = true;
     });
+
+for (const el of document.querySelectorAll(".date-label"))
+  el.textContent = new Intl.DateTimeFormat("ru-RU", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date());
