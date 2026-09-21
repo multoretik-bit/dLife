@@ -1,11 +1,8 @@
-import { SPHERES, minutes, dateKey, sphereFor } from "./schedule.js";
+import { SPHERES, dateKey, sphereFor } from "./schedule.js";
 import { ScheduleStore } from "./store.js";
-const groups = [
-  ["1", "2"],
-  ["3", "4", "5"],
-  ["6", "7"],
-  ["8", "9", "10"],
-];
+import { normalize, progressMinutes, escapeHTML as esc } from "./development.js";
+
+const groups = [["1", "2"], ["3", "4", "5"], ["6", "7"], ["8", "9", "10"]];
 const paths = [
   "M12 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14ZM12 17v4M8 21h8",
   "M4 8v8M7 6v12M17 6v12M20 8v8M7 12h10",
@@ -18,477 +15,119 @@ const paths = [
   "M4 6c0-4 16-4 16 0s-16 4-16 0ZM4 6v6c0 4 16 4 16 0V6M4 12v6c0 4 16 4 16 0v-6",
   "M12 5C9 2 5 2 2 3v17c4-1 7 0 10 2 3-2 6-3 10-2V3c-3-1-7-1-10 2ZM12 5v17",
 ];
+const $ = (selector) => document.querySelector(selector);
+const store = new ScheduleStore();
+let state = null, selected = 0, busy = false, stopAt = null, lastDay = dateKey();
 
-import {
-  normalize,
-  progressMinutes,
-  escapeHTML as esc,
-} from "./development.js";
-const store = new ScheduleStore(),
-  $ = (s) => document.querySelector(s);
-let state = null,
-  selected = 0,
-  busy = false,
-  stopAt = null,
-  lastDay = dateKey();
+function setupTimer() {
+  $(".timer-controls").innerHTML = `<p id="timer-caption">Нажми play, когда начинаешь занятие.</p><div class="timer-icon-actions" aria-label="Управление таймером"><button id="timer-play" type="button" aria-label="Запустить таймер" title="Play">▶</button><button id="timer-pause" type="button" aria-label="Поставить таймер на паузу" title="Пауза">Ⅱ</button><button id="timer-stop" type="button" aria-label="Остановить таймер" title="Стоп">■</button><button id="manual-log" type="button" aria-label="Добавить время вручную" title="Добавить время">＋</button></div>`;
+  $("#session-form").innerHTML = `<label for="log-note">Что делал</label><input id="log-note" name="note" maxlength="300" required placeholder="Например, чтение" autocomplete="off"/><label for="log-minutes">Сколько минут</label><input id="log-minutes" name="minutes" type="number" min="1" max="1440" required inputmode="numeric"/><p class="field-hint">Сфера, цвет и нужная цель определятся автоматически по названию.</p><p id="session-match" class="session-match" aria-live="polite"></p><p id="session-error" role="alert"></p><button class="add-block" type="submit">Засчитать время</button><button type="button" class="quiet-button" id="session-discard">Сбросить без записи</button>`;
+}
+setupTimer();
 
-function setupTimerControls() {
-  const timerControls = $(".timer-controls");
-  if (!timerControls) return;
+const clean = (value) => String(value || "").toLocaleLowerCase("ru").replaceAll("ё", "е").replace(/[^а-яa-z0-9]+/g, " ").trim();
+const sphereRules = [
+  ["10", /чтен|книг|истори|англ|учеб|урок|курс|лекц|язык|экзам/],
+  ["2", /ходьб|хожден|шаг|спорт|трен|бег|отжим|зал|заряд/],
+  ["9", /финанс|бюдж|деньг|инвест|капитал/],
+  ["8", /работ|бизнес|проект|клиент|концепц/],
+  ["6", /отдых|сон|восстанов|перерыв/], ["3", /отношен|свидан|партнер/],
+  ["4", /семь|родител|ребен/], ["5", /друз|окружен|общен/], ["1", /внешност|уход|стиль/],
+];
 
-  // Insert sphere selector if not present
-  if (!$("#timer-sphere")) {
-    const rateLabel = timerControls.querySelector(".coin-rate-label");
-    const sphereHtml = `
-      <div class="timer-sphere-row">
-        <label class="timer-sphere-label" for="timer-sphere">
-          <i class="timer-sphere-dot" id="timer-sphere-dot"></i>
-          Сфера
-        </label>
-        <select id="timer-sphere">
-          ${SPHERES.map((s) => `<option value="${s.id}">${s.name}</option>`).join("")}
-        </select>
-      </div>
-      <div class="timer-preset-row" id="timer-presets">
-        <button type="button" class="timer-preset-chip is-study" data-sphere="10" data-minutes="30" title="30 минут учёбы">⚡ 30 мин (Учёба)</button>
-        <button type="button" class="timer-preset-chip" data-minutes="15">15 мин</button>
-        <button type="button" class="timer-preset-chip" data-minutes="30">30 мин</button>
-        <button type="button" class="timer-preset-chip" data-minutes="45">45 мин</button>
-      </div>
-    `;
-    if (rateLabel) {
-      rateLabel.insertAdjacentHTML("beforebegin", sphereHtml);
-    } else {
-      timerControls.insertAdjacentHTML("afterbegin", sphereHtml);
-    }
+function matchActivity(title) {
+  const value = clean(title);
+  let best = null;
+  for (const practice of state.practices) {
+    const name = clean(practice.name);
+    let score = value === name ? 1000 : value.includes(name) || name.includes(value) ? 700 - Math.abs(value.length - name.length) : value.split(" ").filter((word) => word.length > 2 && name.includes(word)).length * 100;
+    if (!best || score > best.score) best = { practice, score };
   }
-
-  // Wrap or insert action buttons
-  if (!$("#timer-reset")) {
-    const toggleBtn = $("#timer-toggle");
-    const manualBtn = $("#manual-log");
-    const resetBtn = document.createElement("button");
-    resetBtn.id = "timer-reset";
-    resetBtn.type = "button";
-    resetBtn.className = "quiet-button timer-reset-btn";
-    resetBtn.textContent = "Сбросить таймер";
-
-    if (toggleBtn && manualBtn && toggleBtn.parentNode) {
-      toggleBtn.insertAdjacentElement("afterend", resetBtn);
-    }
-  }
-
-  // Ensure discard button exists in session dialog
-  const sessionForm = $("#session-form");
-  if (sessionForm && !$("#session-discard")) {
-    const discardBtn = document.createElement("button");
-    discardBtn.id = "session-discard";
-    discardBtn.type = "button";
-    discardBtn.className = "quiet-button";
-    discardBtn.textContent = "Сбросить таймер без сохранения";
-    sessionForm.appendChild(discardBtn);
-  }
+  if (best?.score > 0) return { practice: best.practice, sphere: sphereFor(best.practice.sphereId) };
+  return { practice: null, sphere: sphereFor(sphereRules.find(([, pattern]) => pattern.test(value))?.[0] || "7") };
 }
 
-setupTimerControls();
-
-function currentSphereId() {
-  return state?.timer?.sphereId || $("#timer-sphere")?.value || "10";
+function timerElapsedMs(now = Date.now()) {
+  if (!state?.timer) return 0;
+  const accumulated = Number(state.timer.accumulatedMs || 0);
+  return state.timer.paused ? accumulated : accumulated + Math.max(0, (stopAt || now) - state.timer.startedAt);
 }
 
-function updateTimerTheme() {
-  const sphere = sphereFor(currentSphereId());
-  const studio = $(".time-studio");
-  if (studio) {
-    studio.style.setProperty("--timer-color", sphere.color);
-  }
-  const dot = $("#timer-sphere-dot");
-  if (dot) {
-    dot.style.background = sphere.color;
-    dot.style.boxShadow = `0 0 10px ${sphere.color}`;
-  }
-  const toggle = $("#timer-toggle");
-  if (toggle) {
-    toggle.style.background = sphere.color;
-  }
+function renderRhythm() {
+  const root = $("#practice-progress");
+  if (!state.practices.length) { root.innerHTML = '<p class="empty-line">Добавь занятие внутри сферы — оно появится на общей линии дня.</p>'; return; }
+  const total = state.practices.reduce((sum, practice) => sum + practice.target, 0);
+  const segments = state.practices.map((practice) => {
+    const actual = progressMinutes(state, practice.id), sphere = sphereFor(practice.sphereId), width = practice.target / total * 100, fill = Math.min(100, actual / practice.target * 100);
+    return `<span class="rhythm-segment" style="width:${width}%;--segment-color:${sphere.color}" title="${esc(practice.name)}: ${actual} / ${practice.target} мин"><i style="width:${fill}%"></i></span>`;
+  }).join("");
+  const legend = state.practices.map((practice) => {
+    const actual = progressMinutes(state, practice.id), sphere = sphereFor(practice.sphereId);
+    return `<a href="/sphere/?id=${practice.sphereId}" class="rhythm-label"><i style="background:${sphere.color}"></i><span>${esc(practice.name)}</span><b>${actual}/${practice.target}</b></a>`;
+  }).join("");
+  root.innerHTML = `<div class="rhythm-hotbar" role="progressbar" aria-label="Дневной прогресс">${segments}</div><div class="rhythm-legend">${legend}</div>`;
 }
 
 function render() {
   if (!state) return;
   const grid = $("#sphere-grid");
   if (grid) {
-    grid.style.gridTemplateColumns =
-      window.innerWidth > 760 ? `repeat(${groups[selected].length},1fr)` : "1fr";
-    grid.innerHTML = groups[selected]
-      .map((id) => {
-        const sphere = SPHERES.find((s) => s.id === id),
-          total = state.practices
-            .filter((p) => p.sphereId === id)
-            .reduce((n, p) => n + p.target, 0),
-          actual = state.logs
-            .filter((l) => l.sphereId === id && l.date === dateKey())
-            .reduce((n, l) => n + l.minutes, 0);
-        return `<a class="sphere-panel sphere-link" href="/sphere/?id=${id}" style="--sphere-color:${sphere.color}"><div class="sphere-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[Number(id) - 1]}"/></svg></div><h2>${sphere.name} ↗</h2><strong>${actual} <small>мин</small></strong><p>${total ? "из " + total + " мин на сегодня" : "Настроить занятия и цели"}</p></a>`;
-      })
-      .join("");
+    grid.style.gridTemplateColumns = window.innerWidth > 760 ? `repeat(${groups[selected].length},1fr)` : "1fr";
+    grid.innerHTML = groups[selected].map((id) => {
+      const sphere = sphereFor(id), total = state.practices.filter((p) => p.sphereId === id).reduce((sum, p) => sum + p.target, 0), actual = state.logs.filter((log) => log.sphereId === id && log.date === dateKey()).reduce((sum, log) => sum + log.minutes, 0);
+      return `<a class="sphere-panel sphere-link" href="/sphere/?id=${id}" style="--sphere-color:${sphere.color}"><div class="sphere-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="${paths[Number(id) - 1]}"/></svg></div><h2>${sphere.name} ↗</h2><strong>${actual} <small>мин</small></strong><p>${total ? `из ${total} мин на сегодня` : "Настроить занятия и цели"}</p></a>`;
+    }).join("");
   }
-  const prog = $("#practice-progress");
-  if (prog) {
-    prog.innerHTML = state.practices.length
-      ? state.practices
-          .map((p) => {
-            const actual = progressMinutes(state, p.id),
-              pct = Math.min(100, (actual / p.target) * 100),
-              sphere = sphereFor(p.sphereId);
-            return `<a class="practice-card" href="/sphere/?id=${p.sphereId}" style="--practice-color:${sphere.color}"><div><strong>${esc(p.name)}</strong><span>${actual} / ${p.target} мин</span></div><div class="minute-track" role="progressbar" aria-label="${esc(p.name)}" aria-valuenow="${Math.min(actual, p.target)}" aria-valuemin="0" aria-valuemax="${p.target}"><i style="width:${pct}%;background:${sphere.color}"></i></div><small style="color:${sphere.color};font-weight:700">${sphere.name}</small></a>`;
-          })
-          .join("")
-      : '<p class="empty-line">Открой сферу и добавь занятие с дневной нормой — здесь появится его прогресс.</p>';
-  }
-  const hist = $("#time-history");
-  if (hist) {
-    const logs = state.logs
-      .filter((l) => l.date === dateKey())
-      .slice()
-      .reverse();
-    hist.innerHTML = logs.length
-      ? logs
-          .map(
-            (l) => {
-              const sp = sphereFor(l.sphereId);
-              return `<div class="history-row" style="--row-color:${sp.color}"><i style="background:${sp.color};box-shadow:0 0 8px ${sp.color}"></i><div><strong>${esc(l.note || state.practices.find((p) => p.id === l.practiceId)?.name || sp.name)}</strong><small style="color:${sp.color};font-weight:700">${sp.name}</small></div><b>${l.minutes} мин</b></div>`;
-            }
-          )
-          .join("")
-      : '<p class="empty-line">Пока нет записанных занятий.</p>';
-  }
+  renderRhythm();
+  const logs = state.logs.filter((log) => log.date === dateKey()).slice().reverse();
+  $("#time-history").innerHTML = logs.length ? logs.map((log) => { const sphere = sphereFor(log.sphereId), title = log.note || state.practices.find((p) => p.id === log.practiceId)?.name || sphere.name; return `<div class="history-row"><i style="background:${sphere.color}"></i><div><strong>${esc(title)}</strong><small>${sphere.name}</small></div><b>${log.minutes} мин</b></div>`; }).join("") : '<p class="empty-line">Пока нет записанных занятий.</p>';
   tick();
 }
 
 function tick() {
-  if (lastDay !== dateKey()) {
-    lastDay = dateKey();
-    render();
-  }
-  const hasTimer = Boolean(state?.timer);
-  const sec = hasTimer
-    ? Math.max(
-        0,
-        Math.floor(((stopAt || Date.now()) - state.timer.startedAt) / 1000),
-      )
-    : 0;
-
-  const clockEl = $("#timer-clock");
-  if (clockEl) {
-    clockEl.textContent = [
-      Math.floor(sec / 3600),
-      Math.floor(sec / 60) % 60,
-      sec % 60,
-    ]
-      .map((n) => String(n).padStart(2, "0"))
-      .join(":");
-  }
-
-  const toggleBtn = $("#timer-toggle");
-  if (toggleBtn) {
-    toggleBtn.textContent = hasTimer ? "Завершить занятие" : "Начать занятие";
-    toggleBtn.disabled = !state || busy;
-  }
-
-  const caption = $("#timer-caption");
-  if (caption) {
-    const sp = sphereFor(currentSphereId());
-    caption.textContent = hasTimer
-      ? `Идёт занятие: ${sp.name}. Сосредоточься на процессе.`
-      : `Выбери сферу и свой ритм. Каждая минута — в твою пользу.`;
-  }
-
-  const manualBtn = $("#manual-log");
-  if (manualBtn) manualBtn.disabled = !state || busy;
-
-  const resetBtn = $("#timer-reset");
-  if (resetBtn) {
-    resetBtn.disabled = (!hasTimer && !stopAt) || busy;
-    resetBtn.style.display = (hasTimer || stopAt) ? "inline-block" : "none";
-  }
-
-  const sphereSelect = $("#timer-sphere");
-  if (sphereSelect) {
-    sphereSelect.disabled = hasTimer || busy;
-    if (state?.timer?.sphereId && sphereSelect.value !== state.timer.sphereId) {
-      sphereSelect.value = state.timer.sphereId;
-    }
-  }
-
-  updateTimerTheme();
+  if (lastDay !== dateKey()) { lastDay = dateKey(); render(); return; }
+  const seconds = Math.floor(timerElapsedMs() / 1000);
+  $("#timer-clock").textContent = [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60].map((part) => String(part).padStart(2, "0")).join(":");
+  const active = Boolean(state?.timer), paused = Boolean(state?.timer?.paused);
+  $("#timer-play").disabled = !state || busy || (active && !paused);
+  $("#timer-pause").disabled = !active || paused || busy;
+  $("#timer-stop").disabled = !active || busy;
+  $("#manual-log").disabled = !state || busy;
+  $("#timer-caption").textContent = !active ? "Нажми play, когда начинаешь занятие." : paused ? "Таймер на паузе." : "Время идёт. Сосредоточься на занятии.";
 }
 
 async function commit(next) {
-  busy = true;
-  tick();
-  try {
-    state = normalize(await store.save(next));
-    const statusEl = $("#aspect-status");
-    if (statusEl) statusEl.textContent = "Сохранено";
-    render();
-    return true;
-  } catch (e) {
-    const statusEl = $("#aspect-status");
-    if (statusEl) statusEl.textContent = e.message;
-    return false;
-  } finally {
-    busy = false;
-    tick();
-  }
+  busy = true; tick();
+  try { state = normalize(await store.save(next)); $("#aspect-status").textContent = "Сохранено"; render(); return true; }
+  catch (error) { $("#aspect-status").textContent = error.message; return false; }
+  finally { busy = false; tick(); }
 }
 
-for (const b of document.querySelectorAll("[data-aspect]"))
-  b.addEventListener("click", () => {
-    selected = Number(b.dataset.aspect);
-    for (const t of document.querySelectorAll("[data-aspect]"))
-      t.setAttribute("aria-selected", String(t === b));
-    render();
-  });
+$("#timer-play").addEventListener("click", async () => { if (busy || !state) return; const next = structuredClone(state); next.timer = next.timer?.paused ? { ...next.timer, startedAt: Date.now(), paused: false } : { startedAt: Date.now(), accumulatedMs: 0, paused: false }; await commit(next); });
+$("#timer-pause").addEventListener("click", async () => { if (busy || !state?.timer || state.timer.paused) return; const next = structuredClone(state); next.timer.accumulatedMs = timerElapsedMs(); next.timer.paused = true; await commit(next); });
+$("#timer-stop").addEventListener("click", () => { if (!state?.timer) return; stopAt = Date.now(); openSession(Math.max(1, Math.min(1440, Math.round(timerElapsedMs(stopAt) / 60000))), true); });
+$("#manual-log").addEventListener("click", () => { stopAt = null; openSession(30, false); });
 
+function openSession(minutes, stopping) {
+  $("#session-form").reset(); $("#log-minutes").value = minutes; $("#session-match").textContent = ""; $("#session-error").textContent = ""; $("#session-discard").hidden = !stopping; $("#session-dialog").showModal(); $("#log-note").focus();
+}
+$("#log-note").addEventListener("input", (event) => { if (!event.target.value.trim()) { $("#session-match").textContent = ""; return; } const match = matchActivity(event.target.value); $("#session-match").textContent = match.practice ? `Будет засчитано: ${match.practice.name} · ${match.sphere.name}` : `Новая запись · ${match.sphere.name}`; $("#session-match").style.setProperty("--match-color", match.sphere.color); });
+$("#session-discard").addEventListener("click", async () => { if (busy || !state?.timer) return; const next = structuredClone(state); next.timer = null; stopAt = null; if (await commit(next)) $("#session-dialog").close(); });
+$("#session-dialog").addEventListener("close", () => { stopAt = null; tick(); });
+$("#session-form").addEventListener("submit", async (event) => {
+  event.preventDefault(); if (busy || !state) return;
+  const data = new FormData(event.currentTarget), note = String(data.get("note") || "").trim(), minutes = Number(data.get("minutes"));
+  if (!note || !Number.isFinite(minutes) || minutes < 1 || minutes > 1440) { $("#session-error").textContent = "Введи название и минуты от 1 до 1440."; return; }
+  const match = matchActivity(note), next = structuredClone(state);
+  next.logs.push({ id: crypto.randomUUID(), sphereId: match.sphere.id, practiceId: match.practice?.id || "", note, date: dateKey(), minutes, coinRate: match.practice?.coinRate ?? 1 });
+  if (stopAt || state.timer) next.timer = null;
+  if (await commit(next)) { stopAt = null; $("#session-dialog").close(); } else $("#session-error").textContent = $("#aspect-status").textContent;
+});
+
+for (const button of document.querySelectorAll("[data-aspect]")) button.addEventListener("click", () => { selected = Number(button.dataset.aspect); for (const tab of document.querySelectorAll("[data-aspect]")) tab.setAttribute("aria-selected", String(tab === button)); render(); });
 window.addEventListener("resize", render);
-
-$("#timer-toggle")?.addEventListener("click", async () => {
-  if (busy || !state) return;
-  if (state.timer) {
-    stopAt = Date.now();
-    openSession(
-      Math.max(
-        1,
-        Math.min(1440, Math.round((stopAt - state.timer.startedAt) / 60000)),
-      ),
-    );
-  } else {
-    const next = structuredClone(state);
-    const sphereId = $("#timer-sphere")?.value || "10";
-    next.timer = {
-      startedAt: Date.now(),
-      sphereId,
-    };
-    await commit(next);
-  }
-});
-
-// Setup sphere select event
-const timerSphereEl = $("#timer-sphere");
-if (timerSphereEl) {
-  if (!timerSphereEl.value) timerSphereEl.value = "10";
-  timerSphereEl.addEventListener("change", () => {
-    updateTimerTheme();
-    tick();
-  });
-}
-
-// Reset button event (works anytime timer is active)
-$("#timer-reset")?.addEventListener("click", async () => {
-  if (busy || !state) return;
-  const next = structuredClone(state);
-  next.timer = null;
-  stopAt = null;
-  await commit(next);
-  if ($("#timer-clock")) $("#timer-clock").textContent = "00:00:00";
-});
-
-// Discard button in session dialog
-$("#session-discard")?.addEventListener("click", async () => {
-  if (busy || !state) return;
-  const next = structuredClone(state);
-  next.timer = null;
-  stopAt = null;
-  await commit(next);
-  if ($("#timer-clock")) $("#timer-clock").textContent = "00:00:00";
-  $("#session-dialog")?.close();
-});
-
-// Preset buttons (e.g. 30 min Study, 15, 30, 45)
-document.querySelectorAll(".timer-preset-chip").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const targetSphere = btn.dataset.sphere;
-    if (targetSphere && $("#timer-sphere")) {
-      $("#timer-sphere").value = targetSphere;
-      updateTimerTheme();
-    }
-    const mins = Number(btn.dataset.minutes) || 30;
-    stopAt = null;
-    openSession(mins);
-  });
-});
-
-function detectAspectFromText(title) {
-  const t = (title || "").toLowerCase().trim();
-  if (
-    t.includes("учеб") ||
-    t.includes("англий") ||
-    t.includes("чтен") ||
-    t.includes("истори") ||
-    t.includes("книг") ||
-    t.includes("курс") ||
-    t.includes("урок")
-  ) return "10";
-  if (
-    t.includes("спорт") ||
-    t.includes("ходьб") ||
-    t.includes("силов") ||
-    t.includes("трен")
-  ) return "2";
-  if (
-    t.includes("работ") ||
-    t.includes("бизнес") ||
-    t.includes("проект")
-  ) return "8";
-  if (t.includes("деньг") || t.includes("финанс") || t.includes("бюджет")) return "9";
-  if (t.includes("отдых") || t.includes("сон") || t.includes("прогулк")) return "6";
-  return null;
-}
-
-function fillPractices() {
-  const id = $("#log-sphere")?.value || "10";
-  const practiceSelect = $("#log-practice");
-  if (!practiceSelect) return;
-  const list = (state?.practices || []).filter((p) => p.sphereId === id);
-  practiceSelect.innerHTML =
-    '<option value="" data-rate="1">Другое занятие (1 🪙/мин)</option>' +
-    list
-      .map((p) => {
-        const rate = p.coinRate ?? 1;
-        return `<option value="${esc(p.id)}" data-rate="${rate}">${esc(p.name)} (${rate} 🪙/мин)</option>`;
-      })
-      .join("");
-  syncPracticeRate();
-  updateDialogTheme();
-}
-
-function syncPracticeRate() {
-  const practiceSelect = $("#log-practice");
-  const selectedOption = practiceSelect?.selectedOptions?.[0];
-  const rateInput = $("#log-rate");
-  if (rateInput) {
-    const r = selectedOption?.dataset?.rate;
-    rateInput.value = r !== undefined && r !== "" ? r : "1";
-  }
-}
-
-function updateDialogTheme() {
-  const id = $("#log-sphere")?.value || "10";
-  const sphere = sphereFor(id);
-  const dialog = $("#session-dialog");
-  if (dialog) {
-    dialog.style.setProperty("--dialog-sphere-color", sphere.color);
-    dialog.style.borderColor = sphere.color;
-  }
-}
-
-function openSession(value) {
-  $("#session-form")?.reset();
-  const sphereSelect = $("#log-sphere");
-  if (sphereSelect) {
-    sphereSelect.innerHTML = SPHERES.map(
-      (s) => `<option value="${s.id}">${s.name}</option>`,
-    ).join("");
-    sphereSelect.value = state?.timer?.sphereId || $("#timer-sphere")?.value || "10";
-  }
-  fillPractices();
-  if ($("#log-minutes")) $("#log-minutes").value = value;
-  if ($("#log-date")) {
-    $("#log-date").value = dateKey();
-    $("#log-date").max = dateKey();
-  }
-  if ($("#session-error")) $("#session-error").textContent = "";
-  updateDialogTheme();
-  $("#session-dialog")?.showModal();
-}
-
-$("#log-sphere")?.addEventListener("change", fillPractices);
-$("#log-practice")?.addEventListener("change", syncPracticeRate);
-$("#log-note")?.addEventListener("input", (e) => {
-  const detected = detectAspectFromText(e.target.value);
-  if (detected && $("#log-sphere") && $("#log-sphere").value !== detected) {
-    $("#log-sphere").value = detected;
-    fillPractices();
-  }
-});
-
-$("#manual-log")?.addEventListener("click", () => {
-  stopAt = null;
-  openSession(30);
-});
-
-$("#session-dialog")?.addEventListener("close", () => {
-  stopAt = null;
-  tick();
-});
-
-$("#session-form")?.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  if (busy) return;
-  const d = new FormData(e.currentTarget),
-    next = structuredClone(state),
-    mins = Number(d.get("minutes"));
-  if (
-    !Number.isFinite(mins) ||
-    mins <= 0 ||
-    mins > 1440 ||
-    d.get("date") > dateKey()
-  ) {
-    $("#session-error").textContent = "Проверь дату и длительность занятия.";
-    return;
-  }
-  next.logs.push({
-    id: crypto.randomUUID(),
-    sphereId: d.get("sphereId"),
-    practiceId: d.get("practiceId"),
-    note: String(d.get("note")).trim(),
-    date: d.get("date"),
-    minutes: mins,
-    coinRate: Number(d.get("coinRate")) || 0,
-  });
-  if (stopAt || state?.timer) next.timer = null;
-  const ok = await commit(next);
-  if (ok) {
-    stopAt = null;
-    $("#session-dialog")?.close();
-  } else {
-    $("#session-error").textContent = $("#aspect-status")?.textContent || "Ошибка сохранения";
-  }
-});
-
 setInterval(tick, 1000);
-
-try {
-  state = normalize(await store.load());
-  const statusEl = $("#aspect-status");
-  if (statusEl) statusEl.textContent = "Нормы настраиваются внутри каждой сферы.";
-  render();
-} catch (e) {
-  const statusEl = $("#aspect-status");
-  if (statusEl) statusEl.textContent = e.message;
-}
-
-document.addEventListener("visibilitychange", async () => {
-  if (!document.hidden && !busy && !$("#session-dialog")?.open) {
-    try {
-      state = normalize(await store.load());
-      render();
-    } catch (e) {
-      const statusEl = $("#aspect-status");
-      if (statusEl) statusEl.textContent = e.message;
-    }
-  }
-});
-
-$("#timer-share")?.addEventListener("click", async () => {
-  const url = new URL("/embed/timer/", location.origin).href;
-  try {
-    await navigator.clipboard.writeText(url);
-    const statusEl = $("#aspect-status");
-    if (statusEl) statusEl.textContent = "Ссылка на таймер скопирована";
-  } catch {
-    prompt("Ссылка на таймер", url);
-  }
-});
-
+try { state = normalize(await store.load()); $("#aspect-status").textContent = "Нормы настраиваются внутри каждой сферы."; render(); } catch (error) { $("#aspect-status").textContent = error.message; }
+document.addEventListener("visibilitychange", async () => { if (!document.hidden && !busy && !$("#session-dialog").open) try { state = normalize(await store.load()); render(); } catch (error) { $("#aspect-status").textContent = error.message; } });
+$("#timer-share")?.addEventListener("click", async () => { const url = new URL("/embed/timer/", location.origin).href; try { await navigator.clipboard.writeText(url); $("#aspect-status").textContent = "Ссылка на таймер скопирована"; } catch { prompt("Ссылка на таймер", url); } });
 if (location.pathname.includes("/timer/")) document.body.classList.add("timer-only");

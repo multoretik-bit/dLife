@@ -51,7 +51,7 @@ function row(item, date = itemDate(item, state.blocks)) {
     done = state.done[key],
     s = sphereFor(item.sphereId);
   const coinsBadge = item.coins
-    ? `<span class="task-coin-badge" title="Награда: ${item.coins} монет">+${item.coins} 🪙</span>`
+    ? `<span class="task-coin-badge" title="Награда: ${item.coins} монет">+${item.coins}<img class="coin-inline" src="/assets/coins.png" alt="монет"/></span>`
     : "";
   return `<div class="activity-wrap" style="--item-color:${s.color}"><label class="activity-row"><input type="checkbox" data-item="${esc(item.id)}" data-date="${date}" ${done ? "checked" : ""} ${busy || date > dateKey() ? "disabled" : ""}><span class="activity-check"></span><span class="activity-name">${esc(item.name)}${coinsBadge}${item.time ? `<small>${item.time}${item.weekly ? " · каждую неделю" : ""}</small>` : ""}</span><span class="sphere-dot" title="${esc(s.name)}"></span></label>${item.type === "habit" ? habitBar(item, state.done, date) : ""}</div>`;
 }
@@ -284,7 +284,7 @@ function renderLibrary() {
     ? list
         .map(
           (i) =>
-            `<div class="library-row"><span class="sphere-dot" style="background:${sphereFor(i.sphereId).color}"></span><div><strong>${esc(i.name)}</strong><small>${kind === "block" ? `${i.start} — ${i.end}` : esc(state.blocks.find((b) => b.id === i.blockId)?.name || "На весь день")}${i.coins ? ` · +${i.coins} 🪙` : ""}${i.date ? " · " + i.date : ""}${i.weekly ? " · еженедельно" : ""}</small></div><button type="button" data-edit="${esc(i.id)}" aria-label="Изменить ${esc(i.name)}">Изменить</button><button type="button" data-delete="${esc(i.id)}" class="delete" aria-label="Удалить ${esc(i.name)}">×</button></div>`,
+            `<div class="library-row"><span class="sphere-dot" style="background:${sphereFor(i.sphereId).color}"></span><div><strong>${esc(i.name)}</strong><small>${kind === "block" ? `${i.start} — ${i.end}` : esc(state.blocks.find((b) => b.id === i.blockId)?.name || "На весь день")}${i.coins ? ` · +${i.coins} монет` : ""}${i.date ? " · " + i.date : ""}${i.weekly ? " · еженедельно" : ""}</small></div><button type="button" data-edit="${esc(i.id)}" aria-label="Изменить ${esc(i.name)}">Изменить</button><button type="button" data-delete="${esc(i.id)}" class="delete" aria-label="Удалить ${esc(i.name)}">×</button></div>`,
         )
         .join("")
     : '<p class="empty-line">Здесь пока ничего нет.</p>';
