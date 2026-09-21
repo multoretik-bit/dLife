@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#174c6c" />
+    <title>dLife — Сейчас</title>
+    <link rel="icon" href="/assets/favicon.svg" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/now.css" />
+    <script type="module" src="/app.js"></script>
+    <script type="module" src="/now.js"></script>
+  </head>
+  <body>
+    <div class="workspace">
+      <header class="header">
+        <a class="brand" href="/" aria-label="dLife — главная"
+          ><img
+            src="/assets/dlife-brand.png"
+            alt="dLife"
+            width="1536"
+            height="1024"
+        /></a>
+        <nav aria-label="Основная навигация">
+          <a href="/">Мой профиль</a
+          ><a class="nav-current" href="/now/" aria-current="page">Сейчас</a>
+        </nav>
+        <div class="header-actions">
+          <button
+            class="share"
+            id="share"
+            aria-label="Ссылка на блок"
+            aria-haspopup="dialog"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+            >
+              <path
+                d="m10 13 4-4m-6 7-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 4a4 4 0 0 0 6 0l4-4a4 4 0 0 0-6-6l-1 1"
+                transform="translate(1 2) scale(.9)"
+              />
+            </svg></button
+          ><button
+            class="share"
+            id="settings"
+            aria-label="Настроить блоки, привычки и задачи"
+            aria-haspopup="dialog"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+            >
+              <path
+                d="m9 3-.7 3-2.7.8L3.5 9l2.1 2.2v2.6L3.5 16l2.1 2.2 2.7.8.7 3h6l.7-3 2.7-.8 2.1-2.2-2.1-2.2v-2.6L20.5 9l-2.1-2.2-2.7-.8L15 3Z"
+                transform="translate(0 -1)"
+              />
+              <circle cx="12" cy="11" r="3" />
+            </svg>
+          </button>
+        </div>
+      </header>
+      <main>
+        <section id="load-error" hidden class="load-error">
+          <p id="load-error-text"></p>
+          <button id="retry">Попробовать ещё раз</button>
+        </section>
+        <article class="now-card" id="now-card" hidden>
+          <div class="block-hero">
+            <div class="block-copy">
+              <div class="eyebrow" id="block-eyebrow"></div>
+              <h1 id="block-title"></h1>
+              <p class="block-meta">
+                <span id="block-time"></span
+                ><span class="sphere-tag"
+                  ><i></i><span id="block-sphere"></span
+                ></span>
+              </p>
+              <p class="remainder" id="block-remainder"></p>
+              <p id="rest-copy"></p>
+            </div>
+            <div class="art-orbit" aria-hidden="true"></div>
+            <div class="sphere-art" id="now-visual" aria-hidden="true"></div>
+          </div>
+          <div class="block-items" id="block-items">
+            <section>
+              <h2>Привычки</h2>
+              <div id="habit-list"></div>
+            </section>
+            <section>
+              <h2>Задачи</h2>
+              <div id="task-list"></div>
+            </section>
+          </div>
+          <footer class="block-footer">
+            <span id="next-block"></span
+            ><button id="block-link">Ссылка на этот блок ↗</button>
+          </footer>
+        </article>
+        <div id="notice" role="status" aria-live="polite"></div>
+      </main>
+    </div>
+    <dialog id="settings-dialog" class="settings-dialog">
+      <form method="dialog">
+        <button class="close" aria-label="Закрыть настройки">×</button>
+      </form>
+      <div class="settings-heading">
+        <span>МОЁ РАСПИСАНИЕ</span>
+        <h2>Всё начинается с блока.</h2>
+      </div>
+      <div class="editor-tabs" role="tablist" aria-label="Что создать">
+        <button role="tab" data-kind="block" aria-selected="true">Блоки</button
+        ><button role="tab" data-kind="habit" aria-selected="false">
+          Привычки</button
+        ><button role="tab" data-kind="task" aria-selected="false">
+          Задачи
+        </button>
+      </div>
+      <div class="editor-layout">
+        <section>
+          <h3 id="editor-title">Новый блок</h3>
+          <form id="entity-form">
+            <label for="name">Название</label
+            ><input
+              id="name"
+              name="name"
+              required
+              maxlength="100"
+              placeholder="Например, спортивный блок"
+            />
+            <div id="timing-fields" class="timing">
+              <div>
+                <label for="start">Начало</label
+                ><input type="time" id="start" name="start" value="09:00" />
+              </div>
+              <div>
+                <label for="end">Окончание</label
+                ><input type="time" id="end" name="end" value="10:00" />
+              </div>
+              <small>Повторяется каждый день. Можно через полночь.</small>
+            </div>
+            <div id="parent-field" hidden>
+              <label for="parent">В каком блоке</label
+              ><select id="parent" name="parent"></select>
+              <p id="no-parent" hidden>
+                Сначала создайте блок во вкладке «Блоки».
+              </p>
+            </div>
+            <fieldset>
+              <legend>Сфера жизни и цвет</legend>
+              <div id="sphere-options"></div>
+            </fieldset>
+            <p id="form-error" role="alert"></p>
+            <div class="form-actions">
+              <button type="button" class="secondary" id="cancel-edit">
+                Сбросить</button
+              ><button type="submit" id="save-entity">Создать</button>
+            </div>
+          </form>
+        </section>
+        <section class="library">
+          <h3 id="library-title">Мои блоки</h3>
+          <div id="entity-library"></div>
+        </section>
+      </div>
+    </dialog>
+    <dialog id="share-dialog">
+      <form method="dialog">
+        <button class="close" aria-label="Закрыть">×</button>
+      </form>
+      <h2>Ссылка на блок</h2>
+      <p>
+        Этот блок показывает то, что идёт сейчас. Вставьте ссылку в Notion через
+        /embed.
+      </p>
+      <label for="embed-url">Для вставки в Notion</label>
+      <div class="copy-row">
+        <input id="embed-url" readonly /><button id="copy">Копировать</button>
+      </div>
+      <a id="standalone" target="_blank" rel="noopener">Открыть отдельно ↗</a>
+      <p class="hint">
+        Приватная страница может потребовать входа. Встраивание зависит от
+        ограничений Notion и хостинга.
+      </p>
+      <span id="copy-status" role="status"></span>
+    </dialog>
+  </body>
+</html>

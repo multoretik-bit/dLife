@@ -1,6 +1,112 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#174c6c"><title>dLife — Мой профиль</title><meta name="description" content="Личное пространство Дениса."><link rel="icon" type="image/svg+xml" href="/assets/favicon.svg"><link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script></head>
-<body><div class="workspace"><header class="header"><a class="brand" href="/" aria-label="dLife — главная"><img src="/assets/dlife-brand.png" alt="dLife" width="1536" height="1024"></a><span class="nav-current">Мой профиль</span><button class="share" id="share" aria-label="Ссылка на блок" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m10 13 4-4m-6 7-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 4a4 4 0 0 0 6 0l4-4a4 4 0 0 0-6-6l-1 1" transform="translate(1 2) scale(.9)"/></svg></button></header>
-<main><article class="profile" aria-label="Профиль Дениса"><div class="portrait" id="portrait" role="img" aria-label="Персонаж Дениса смотрит на вас"><div class="portrait-halo"></div><div class="portrait-image"><img src="/assets/denis.png" alt="" aria-hidden="true"></div></div><div class="greeting"><h1><span id="greeting">Доброе утро,</span><br><span class="name">Денис.</span></h1><p class="day-caption">Сегодня ваш</p><p class="day"><span id="life-day">—</span><span class="day-word">день.</span></p></div><button class="motion" id="motion" aria-label="Приостановить анимацию" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 6v12M15 6v12"/></svg></button></article></main></div>
-<dialog id="share-dialog"><form method="dialog"><button class="close" aria-label="Закрыть">×</button></form><h2>Ссылка на блок</h2><p>Этот профиль можно открыть отдельно или вставить в Notion через /embed.</p><label for="embed-url">Для вставки в Notion</label><div class="copy-row"><input id="embed-url" readonly><button id="copy">Копировать</button></div><a id="standalone" target="_blank" rel="noopener">Открыть блок отдельно ↗</a><p class="hint">Для отображения в Notion адрес должен быть доступен в интернете и разрешать встраивание. Приватная страница может потребовать входа.</p><span id="copy-status" role="status"></span></dialog>
-</body></html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#174c6c" />
+    <title>dLife — Мой профиль</title>
+    <meta name="description" content="Личное пространство Дениса." />
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/now.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <div class="workspace">
+      <header class="header">
+        <a class="brand" href="/" aria-label="dLife — главная"
+          ><img
+            src="/assets/dlife-brand.png"
+            alt="dLife"
+            width="1536"
+            height="1024"
+        /></a>
+        <nav aria-label="Основная навигация">
+          <a class="nav-current" href="/" aria-current="page">Мой профиль</a
+          ><a href="/now/">Сейчас</a>
+        </nav>
+        <button
+          class="share"
+          id="share"
+          aria-label="Ссылка на блок"
+          aria-haspopup="dialog"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+          >
+            <path
+              d="m10 13 4-4m-6 7-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 4a4 4 0 0 0 6 0l4-4a4 4 0 0 0-6-6l-1 1"
+              transform="translate(1 2) scale(.9)"
+            />
+          </svg>
+        </button>
+      </header>
+      <main>
+        <article class="profile" aria-label="Профиль Дениса">
+          <div
+            class="portrait"
+            id="portrait"
+            role="img"
+            aria-label="Персонаж Дениса смотрит на вас"
+          >
+            <div class="portrait-halo"></div>
+            <div class="portrait-image">
+              <img src="/assets/denis.png" alt="" aria-hidden="true" />
+            </div>
+          </div>
+          <div class="greeting">
+            <h1>
+              <span id="greeting">Доброе утро,</span><br /><span class="name"
+                >Денис.</span
+              >
+            </h1>
+            <p class="day-caption">Сегодня ваш</p>
+            <p class="day">
+              <span id="life-day">—</span><span class="day-word">день.</span>
+            </p>
+          </div>
+          <div class="profile-art" aria-hidden="true"></div>
+          <button
+            class="motion"
+            id="motion"
+            aria-label="Приостановить анимацию"
+            aria-pressed="false"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+            >
+              <path d="M9 6v12M15 6v12" />
+            </svg>
+          </button>
+        </article>
+      </main>
+    </div>
+    <dialog id="share-dialog">
+      <form method="dialog">
+        <button class="close" aria-label="Закрыть">×</button>
+      </form>
+      <h2>Ссылка на блок</h2>
+      <p>
+        Этот профиль можно открыть отдельно или вставить в Notion через /embed.
+      </p>
+      <label for="embed-url">Для вставки в Notion</label>
+      <div class="copy-row">
+        <input id="embed-url" readonly /><button id="copy">Копировать</button>
+      </div>
+      <a id="standalone" target="_blank" rel="noopener"
+        >Открыть блок отдельно ↗</a
+      >
+      <p class="hint">
+        Для отображения в Notion адрес должен быть доступен в интернете и
+        разрешать встраивание. Приватная страница может потребовать входа.
+      </p>
+      <span id="copy-status" role="status"></span>
+    </dialog>
+  </body>
+</html>

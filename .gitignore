@@ -1,3 +1,7 @@
 .sites-runtime/
 node_modules/
 *.log
+
+dist/client/
+dist/server/
+dist/.openai/
