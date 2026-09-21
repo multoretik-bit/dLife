@@ -1,3 +1,5 @@
+import {build} from "esbuild";
+await build({entryPoints:["src/cloud-client.js"],bundle:true,format:"esm",outfile:"dist/cloud.js",minify:true});
 import { mkdir, cp, readFile, writeFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 const root = resolve("dist");

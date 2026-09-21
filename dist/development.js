@@ -45,6 +45,8 @@ export function habitBar(item, done, date) {
 export function normalize(state) {
   return {
     ...state,
+    rewards: state.rewards || {},
+    steps: state.steps || {},
     practices: state.practices || [],
     logs: state.logs || [],
     spherePlans: state.spherePlans || {},
@@ -56,3 +58,6 @@ export function progressMinutes(state, id, date = dateKey()) {
     .filter((l) => l.practiceId === id && l.date === date)
     .reduce((n, l) => n + l.minutes, 0);
 }
+
+export function coinTotal(state){return Math.round((Object.values(state.rewards||{}).reduce((a,b)=>a+b,0)+(state.logs||[]).reduce((n,l)=>n+l.minutes*(l.coinRate||0),0))*100)/100;}
+export function setReward(state,key,checked,coins){state.rewards??={};if(checked){if(!(key in state.rewards))state.rewards[key]=coins||0;}else delete state.rewards[key];}

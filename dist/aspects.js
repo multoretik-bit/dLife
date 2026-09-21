@@ -135,7 +135,7 @@ $("#timer-toggle").addEventListener("click", async () => {
     );
   } else {
     const next = structuredClone(state);
-    next.timer = { startedAt: Date.now() };
+    next.timer = { startedAt: Date.now(), coinRate:Number($("#timer-rate").value)||0 };
     await commit(next);
   }
 });
@@ -155,6 +155,7 @@ function openSession(value) {
   ).join("");
   fillPractices();
   $("#log-minutes").value = value;
+  $("#log-rate").value=stopAt ? state.timer?.coinRate||0 : Number($("#timer-rate").value)||0;
   $("#log-date").value = dateKey();
   $("#log-date").max = dateKey();
   $("#session-error").textContent = "";
@@ -191,6 +192,7 @@ $("#session-form").addEventListener("submit", async (e) => {
     note: String(d.get("note")).trim(),
     date: d.get("date"),
     minutes: mins,
+    coinRate: Number(d.get("coinRate"))||0,
   });
   if (stopAt) next.timer = null;
   const ok = await commit(next);
@@ -219,3 +221,6 @@ document.addEventListener("visibilitychange", async () => {
     }
   }
 });
+
+$('#timer-share').addEventListener('click',async()=>{const url=new URL('/embed/timer/',location.origin).href;try{await navigator.clipboard.writeText(url);$('#aspect-status').textContent='Ссылка на таймер скопирована';}catch{prompt('Ссылка на таймер',url);}});
+if(location.pathname.includes('/timer/'))document.body.classList.add('timer-only');

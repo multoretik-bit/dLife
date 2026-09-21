@@ -10,6 +10,10 @@
   },
   "devDependencies": {
     "drizzle-kit": "0.31.4",
-    "drizzle-orm": "0.44.5"
+    "drizzle-orm": "0.44.5",
+    "esbuild": "^0.28.2"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.116.0"
   }
 }

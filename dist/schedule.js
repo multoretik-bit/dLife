@@ -114,6 +114,11 @@ export function validateState(state) {
     itemIds.add(i.id);
   }
   if (!validateDevelopment(state)) return false;
+  const amount=v=>Number.isFinite(v)&&v>=0&&v<=1000000;
+  if(state.items.some(i=>i.coins!==undefined&&!amount(i.coins)))return false;
+  if(state.rewards!==undefined&&(!state.rewards||Array.isArray(state.rewards)||typeof state.rewards!=='object'||Object.entries(state.rewards).some(([k,v])=>k.length>200||!amount(v))))return false;
+  if(state.steps!==undefined&&(!state.steps||Array.isArray(state.steps)||typeof state.steps!=='object'||Object.entries(state.steps).some(([k,v])=>!validDate(k)||!Number.isInteger(v)||v<0||v>200000)))return false;
+  if(state.logs?.some(l=>l.coinRate!==undefined&&!amount(l.coinRate)))return false;
   return Object.entries(state.done).every(
     ([key, val]) => key.length < 200 && typeof val === "boolean",
   );

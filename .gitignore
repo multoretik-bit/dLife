@@ -1,6 +1,7 @@
 .sites-runtime/
 node_modules/
 *.log
+.vercel/
 
 dist/client/
 dist/server/

@@ -13,6 +13,7 @@ import {
   completionKey,
   itemDate,
   habitBar,
+  setReward,
 } from "./development.js";
 const $ = (s) => document.querySelector(s),
   store = new ScheduleStore();
@@ -189,6 +190,7 @@ document.querySelector("main").addEventListener("change", async (e) => {
   const item = state.items.find((i) => i.id === id);
   const next = structuredClone(state);
   next.done[completionKey(item, e.target.dataset.date)] = e.target.checked;
+  setReward(next,completionKey(item,e.target.dataset.date),e.target.checked,item.coins);
   busy = true;
   render();
   try {
@@ -240,6 +242,7 @@ function setKind(value) {
   $("#timing-fields").hidden = kind !== "block";
   $("#parent-field").hidden = kind === "block";
   $("#task-schedule").hidden = kind !== "task";
+  $("#reward-field").hidden = kind === "block";
   $("#habit-explainer").hidden = kind !== "habit";
   $("#no-parent").hidden = true;
   $("#form-error").textContent = "";
@@ -321,6 +324,7 @@ $("#entity-form").addEventListener("submit", async (e) => {
     error = validateBlock(entry, state.blocks);
   } else {
     entry.type = kind;
+    entry.coins = Number(d.get("coins")||0);
     entry.blockId = d.get("parent") || "";
     if (kind === "task") {
       entry.date = d.get("date") || "";
@@ -374,6 +378,7 @@ $("#entity-library").addEventListener("click", async (e) => {
       $("#end").value = entry.end;
     } else {
       $("#parent").value = entry.blockId;
+      $("#item-coins").value=entry.coins||0;
       if (kind === "task") {
         $("#task-date").value = entry.date || "";
         $("#task-time").value = entry.time || "";
@@ -401,7 +406,7 @@ $("#entity-library").addEventListener("click", async (e) => {
   if (kind === "block")
     next.blocks = next.blocks.filter((b) => b.id !== remove);
   for (const key of Object.keys(next.done))
-    if (ids.some((id) => key.endsWith(":" + id))) delete next.done[key];
+    if (ids.some((id) => key.endsWith(":" + id))) { delete next.done[key]; if(next.rewards)delete next.rewards[key]; }
   await saveEditor(next);
 });
 $("#retry").addEventListener("click", load);

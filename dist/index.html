@@ -6,23 +6,17 @@
     <meta name="theme-color" content="#174c6c" />
     <title>dLife — Мой профиль</title>
     <meta name="description" content="Личное пространство Дениса." />
-    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link rel="icon" type="image/png" href="/assets/app-icon.png" />
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/now.css" />
     <link rel="stylesheet" href="/design.css" />
     <link rel="stylesheet" href="/features.css" />
-    <script type="module" src="/app.js"></script>
-  </head>
+    <script type="module" src="/app.js"></script><script type="module" src="/home.js"></script>
+  <link rel="stylesheet" href="/extensions.css"/><script type="module" src="/account.js"></script></head>
   <body>
     <div class="workspace">
       <header class="header">
-        <a class="brand" href="/" aria-label="dLife — главная"
-          ><img
-            src="/assets/dlife-brand.png"
-            alt="dLife"
-            width="1536"
-            height="1024"
-        /></a>
+        <a class="brand" href="/" aria-label="dLife — главная"><img src="/assets/app-icon.png" alt="" width="48" height="48"/><span>dLife</span></a>
         <nav aria-label="Основная навигация">
           <a class="nav-current" href="/" aria-current="page">Профиль</a
           ><a href="/now/">Задачи</a> <a href="/aspects/">Аспекты</a>
@@ -91,7 +85,7 @@
             </svg>
           </button>
         </article>
-      </main>
+      <section class="home-stats"><article class="stat-card"><span>Мой капитал</span><strong id="capital-value">—</strong><p id="capital-status">Подключи аккаунт dMoney через Supabase</p><button class="quiet-button" id="capital-refresh">Обновить dMoney ↗</button></article><article class="stat-card"><span>Шаги сегодня</span><strong id="steps-value">0</strong><p>Ручной ввод · за сегодня</p><form id="steps-form"><input aria-label="Количество шагов" id="steps-input" type="number" min="0" max="200000" required placeholder="Например, 8000"/><button type="submit" class="quiet-button">Сохранить</button></form></article><article class="stat-card"><span>Время с пользой</span><strong id="useful-value">0 <small>мин</small></strong><p>Все занятия из таймера за сегодня</p><a href="/aspects/" class="quiet-button">Открыть таймер ↗</a></article></section><section class="account-actions"><span class="coin-balance"><img src="/assets/coins.png" alt="Монеты"/><strong id="coin-balance">0</strong></span><button class="quiet-button" id="open-cloud">Синхронизация</button><button class="quiet-button" id="export-data">Скачать резервную копию</button><span id="home-status" role="status"></span></section></main>
     </div>
     <dialog id="share-dialog">
       <form method="dialog">
@@ -114,5 +108,5 @@
       </p>
       <span id="copy-status" role="status"></span>
     </dialog>
-  </body>
+  <dialog id="cloud-dialog"><form method="dialog"><button class="close" aria-label="Закрыть синхронизацию">×</button></form><h2>Твои данные в Supabase</h2><p>Используй проект и аккаунт dMoney для общего капитала. Сначала выполни supabase/schema.sql из GitHub.</p><form id="cloud-config"><label for="cloud-url">Project URL</label><input type="url" id="cloud-url" required placeholder="https://project.supabase.co"/><label for="cloud-key">Publishable / anon key · публичный</label><input id="cloud-key" required autocomplete="off"/><button class="add-block">Сохранить подключение</button></form><form id="cloud-login"><label for="cloud-email">Email аккаунта Supabase</label><input id="cloud-email" type="email" required autocomplete="username"/><label for="cloud-password">Пароль</label><input id="cloud-password" type="password" required autocomplete="current-password"/><button class="add-block">Войти</button></form><button class="quiet-button" id="cloud-migrate">Перенести данные и включить Supabase</button><button class="quiet-button" id="cloud-logout">Выйти из Supabase</button><p id="cloud-status" role="status"></p></dialog></body>
 </html>
