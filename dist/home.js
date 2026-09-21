@@ -1,10 +1,32 @@
 import {ScheduleStore} from './store.js';
-import {cloudClient,cloudConfig,configureCloud,cloudEnabled,cloudUser} from './cloud.js';
-import {dateKey} from './schedule.js';
+import {cloudClient,cloudConfig,configureCloud,cloudEnabled,cloudUser,joinSyncCode,codeSyncEnabled,savedSyncCode,disableCodeSync} from './cloud.js';
+import {dateKey,emptyState} from './schedule.js';
 import {coinTotal,normalize} from './development.js';
 
 const $ = s => document.querySelector(s), store = new ScheduleStore();
 let state = null, busy = false;
+
+$('#cloud-login')?.insertAdjacentHTML('beforebegin',`<section class="sync-code-panel"><span>ЕДИНЫЙ АККАУНТ DLIFE</span><h3>Один код — все устройства</h3><p>Создай код на этом устройстве или введи существующий. Задачи, блоки, привычки, таймер и прогресс будут общими.</p><div class="sync-code-row"><input id="sync-code" aria-label="Код синхронизации" placeholder="DLIFE-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false"/><button class="add-block" id="sync-code-join" type="button">Войти по коду</button></div><div class="sync-code-actions"><button class="quiet-button" id="sync-code-create" type="button">Создать новый код</button><button class="quiet-button" id="sync-code-copy" type="button">Копировать код</button><button class="quiet-button" id="sync-code-disable" type="button">Отключить на устройстве</button></div><p id="sync-code-status" role="status"></p></section>`);
+const makeCode=()=>{const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',bytes=crypto.getRandomValues(new Uint8Array(12)),part=(from)=>Array.from(bytes.slice(from,from+4),n=>alphabet[n%alphabet.length]).join('');return `DLIFE-${part(0)}-${part(4)}-${part(8)}`;};
+if($('#sync-code'))$('#sync-code').value=savedSyncCode();
+
+async function connectCode(code){
+  if(busy)return;
+  busy=true;
+  $('#sync-code-status').textContent='Подключаем защищённое пространство…';
+  try{
+    const initial=state||normalize(await new ScheduleStore().load());
+    const result=await joinSyncCode(code,initial);
+    $('#sync-code').value=String(code).toUpperCase();
+    $('#sync-code-status').textContent=result?.created?'Код создан. Сохрани его — синхронизация включена.':'Вход выполнен. Загружаем данные с другого устройства…';
+    setTimeout(()=>location.reload(),700);
+  }catch(error){$('#sync-code-status').textContent=error.message;}
+  finally{busy=false;}
+}
+$('#sync-code-create')?.addEventListener('click',()=>{const code=makeCode();$('#sync-code').value=code;connectCode(code);});
+$('#sync-code-join')?.addEventListener('click',()=>connectCode($('#sync-code').value));
+$('#sync-code-copy')?.addEventListener('click',async()=>{const code=$('#sync-code').value.trim();if(!code)return $('#sync-code-status').textContent='Сначала создай или введи код.';try{await navigator.clipboard.writeText(code);$('#sync-code-status').textContent='Код скопирован.';}catch{$('#sync-code-status').textContent='Код: '+code;}});
+$('#sync-code-disable')?.addEventListener('click',()=>{disableCodeSync();$('#sync-code-status').textContent='Синхронизация отключена только на этом устройстве.';setTimeout(()=>location.reload(),500);});
 
 function render() {
   if (!state) return;
@@ -56,7 +78,7 @@ function openCloudDialog() {
   const c = cloudConfig();
   if ($('#cloud-url')) $('#cloud-url').value = c?.url || '';
   if ($('#cloud-key')) $('#cloud-key').value = c?.key || '';
-  $('#cloud-status').textContent = cloudEnabled() ? 'Хранилище: Supabase (синхронизация активна)' : 'Хранилище: dLife. Вход подключит капитал dMoney.';
+  $('#cloud-status').textContent = codeSyncEnabled() ? 'Синхронизация по коду активна.' : cloudEnabled() ? 'Хранилище: Supabase (синхронизация активна)' : 'Хранилище: dLife. Создай код для синхронизации.';
   $('#cloud-dialog')?.showModal();
 }
 
@@ -89,7 +111,16 @@ $('#cloud-login')?.addEventListener('submit', async e => {
     $('#cloud-status').textContent = 'Не удалось войти в dMoney: ' + error.message;
     return;
   }
-  $('#cloud-status').textContent = 'Вход выполнен! Капитал подключён.';
+  let syncMessage = '';
+  if (savedSyncCode()) {
+    try {
+      await joinSyncCode(savedSyncCode(), state || emptyState());
+      syncMessage = ' Код синхронизации привязан к аккаунту.';
+    } catch (syncError) {
+      syncMessage = ' Код синхронизации нужно подключить повторно: ' + syncError.message;
+    }
+  }
+  $('#cloud-status').textContent = 'Вход выполнен! Капитал подключён.' + syncMessage;
   setTimeout(() => {
     $('#cloud-dialog')?.close();
   }, 1000);

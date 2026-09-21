@@ -384,3 +384,12 @@
 .coin-inline{width:22px;height:22px;object-fit:contain;vertical-align:middle;margin:0 3px}.task-coin-badge,.coin-chip{background:#e4f5ff!important;color:#17668f!important;border-color:#acd9ef!important}
 
 @media(max-width:760px){.brand{width:142px!important;min-width:142px!important;height:48px!important;padding:4px 8px!important}.brand img{width:126px!important;height:40px!important;max-width:126px!important}.timer-icon-actions{justify-content:flex-start}.timer-icon-actions button{width:48px;height:48px}}
+
+.sync-code-panel{padding:20px;border-radius:18px;background:#e4f5ff;border:1px solid #b8def1;margin:12px 0 22px}.sync-code-panel>span{font-size:11px;letter-spacing:.12em;color:#3183ad;font-weight:750}.sync-code-panel h3{font-size:23px;margin:8px 0}.sync-code-panel p{font-size:13px;line-height:1.5;color:#52758a}.sync-code-row{display:grid;grid-template-columns:1fr auto;gap:8px}.sync-code-row input{text-transform:uppercase;letter-spacing:.08em;font-weight:700}.sync-code-row .add-block{margin:0!important;white-space:nowrap}.sync-code-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.sync-code-actions .quiet-button{padding:7px 9px;min-height:36px}#sync-code-status{margin:8px 0 0!important;color:#256b91!important}
+
+/* Every schedule surface inherits the exact color of its life sphere. */
+.now-card:not(.is-rest){background:linear-gradient(135deg,color-mix(in srgb,var(--sphere) 25%,#fff) 0%,color-mix(in srgb,var(--sphere) 14%,#edf8fd) 100%)!important;border-color:color-mix(in srgb,var(--sphere) 42%,transparent)!important;box-shadow:0 30px 80px color-mix(in srgb,var(--sphere) 18%,transparent)!important}
+.now-card:not(.is-rest) .art-orbit{background:radial-gradient(circle,color-mix(in srgb,var(--sphere) 24%,transparent),transparent 68%)!important}
+.schedule-block{background:linear-gradient(110deg,color-mix(in srgb,var(--sphere) 22%,#fff),color-mix(in srgb,var(--sphere) 9%,#fff))!important;border-left-color:var(--sphere)!important;box-shadow:0 12px 30px color-mix(in srgb,var(--sphere) 10%,transparent)}
+.timeline-entry{background:color-mix(in srgb,var(--entry-color) 10%,transparent);border-radius:12px;padding:8px 10px}
+@media(max-width:760px){.sync-code-row{grid-template-columns:1fr}.sync-code-row .add-block{width:100%}}

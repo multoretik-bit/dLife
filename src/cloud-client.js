@@ -25,6 +25,8 @@ export function configureCloud(url,key){
   client=null;
 }
 export const cloudEnabled=()=>localStorage.getItem('dlife-cloud-enabled')==='true';
+export const codeSyncEnabled=()=>localStorage.getItem('dlife-code-enabled')==='true';
+export const savedSyncCode=()=>localStorage.getItem('dlife-sync-code')||'';
 export async function cloudUser(){
   const c=cloudClient();
   if(!c)return null;
@@ -36,3 +38,22 @@ export async function cloudUser(){
   if(error)return null;
   return data.user;
 }
+export async function joinSyncCode(code,initialState){
+  const c=cloudClient();
+  if(!c)throw Error('Проект Supabase не настроен.');
+  let user=await cloudUser();
+  if(!user){
+    const {data,error}=await c.auth.signInAnonymously();
+    if(error)throw Error('Не удалось создать устройство: '+error.message+'. Включи Anonymous Sign-Ins в Supabase Auth.');
+    user=data.user;
+  }
+  const normalized=String(code||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(normalized.length<10||normalized.length>32)throw Error('Код должен содержать от 10 до 32 букв и цифр.');
+  const {data,error}=await c.rpc('dlife_join_code',{p_code:normalized,p_initial:initialState});
+  if(error)throw Error('Код не подключён: '+error.message);
+  localStorage.setItem('dlife-sync-code',String(code).toUpperCase());
+  localStorage.setItem('dlife-code-enabled','true');
+  localStorage.removeItem('dlife-cloud-enabled');
+  return data;
+}
+export function disableCodeSync(){localStorage.removeItem('dlife-code-enabled');}

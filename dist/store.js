@@ -1,4 +1,4 @@
-import { cloudClient, cloudEnabled, cloudUser } from "./cloud.js";
+import { cloudClient, cloudEnabled, cloudUser, codeSyncEnabled } from "./cloud.js";
 import { emptyState, validateState } from "./schedule.js";
 
 const LOCAL_KEY = "dlife-local-state-v1";
@@ -23,6 +23,16 @@ export class ScheduleStore {
   backend = "api";
 
   async load() {
+    if (codeSyncEnabled()) {
+      const user = await cloudUser();
+      if (!user) throw Error("Устройство вышло из аккаунта синхронизации. Введи код снова на главной.");
+      const { data, error } = await cloudClient().rpc("dlife_code_load");
+      if (error) throw Error("Синхронизация по коду недоступна: " + error.message);
+      if (!data?.payload || !validateState(data.payload)) throw Error("Облачные данные не прошли проверку.");
+      this.backend = "code";
+      this.revision = Number(data.revision || 0);
+      return data.payload;
+    }
     if (cloudEnabled()) {
       const user = await cloudUser();
       if (!user)
@@ -66,6 +76,13 @@ export class ScheduleStore {
 
   async save(state) {
     if (!validateState(state)) throw Error("Проверь введённые значения.");
+    if (codeSyncEnabled()) {
+      const { data, error } = await cloudClient().rpc("dlife_code_save", { p_payload: state, p_revision: this.revision });
+      if (error) throw Error(error.message.includes("revision conflict") ? "Данные изменились на другом устройстве. Обнови страницу." : "Supabase не сохранил изменения: " + error.message);
+      this.backend = "code";
+      this.revision = Number(data);
+      return state;
+    }
     if (cloudEnabled()) {
       const { data, error } = await cloudClient().rpc("dlife_save", {
         p_payload: state,
