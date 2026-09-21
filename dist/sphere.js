@@ -44,7 +44,7 @@ function renderPractices() {
     ? list
         .map(
           (p) =>
-            `<div class="practice-edit-row"><div><strong>${esc(p.name)}</strong><small>${progressMinutes(state, p.id)} / ${p.target} мин сегодня</small></div><button type="button" class="quiet-button" data-edit-practice="${esc(p.id)}">Изменить</button><button type="button" class="quiet-button" data-remove-practice="${esc(p.id)}" aria-label="Удалить ${esc(p.name)}">×</button></div>`,
+            `<div class="practice-edit-row"><div><strong>${esc(p.name)}</strong><small>${progressMinutes(state, p.id)} / ${p.target} мин сегодня · ${p.coinRate ?? 1} монет/мин</small></div><button type="button" class="quiet-button" data-edit-practice="${esc(p.id)}">Изменить</button><button type="button" class="quiet-button" data-remove-practice="${esc(p.id)}" aria-label="Удалить ${esc(p.name)}">×</button></div>`,
         )
         .join("")
     : '<p class="empty-line">Добавь отдельную норму для каждого занятия.</p>';
@@ -108,7 +108,8 @@ if (!sphere) {
     e.preventDefault();
     if (!state || busy) return;
     const name = $("#practice-name").value.trim(),
-      target = Number($("#practice-target").value);
+      target = Number($("#practice-target").value),
+      coinRate = Number($("#practice-rate")?.value || 1);
     if (!name || !Number.isInteger(target) || target < 1 || target > 1440)
       return message("Укажи название и норму от 1 до 1440 минут.");
     const next = structuredClone(state),
@@ -117,6 +118,7 @@ if (!sphere) {
         sphereId: id,
         name,
         target,
+        coinRate: Number.isFinite(coinRate) && coinRate >= 0 ? coinRate : 1,
       },
       index = next.practices.findIndex((p) => p.id === entry.id);
     if (index < 0) next.practices.push(entry);
@@ -126,10 +128,19 @@ if (!sphere) {
   function resetPractice() {
     editing = null;
     $("#practice-form").reset();
+    if ($("#practice-rate")) $("#practice-rate").value = "1";
     $("#practice-save").textContent = "Добавить";
     $("#practice-cancel").hidden = true;
   }
   $("#practice-cancel").addEventListener("click", resetPractice);
+  document.querySelectorAll(".practice-rate-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const rateInput = $("#practice-rate");
+      if (rateInput && chip.dataset.rate) {
+        rateInput.value = chip.dataset.rate;
+      }
+    });
+  });
   $("#sphere-practices").addEventListener("click", async (e) => {
     if (busy) return;
     const edit = e.target.dataset.editPractice,
@@ -139,6 +150,7 @@ if (!sphere) {
       editing = p.id;
       $("#practice-name").value = p.name;
       $("#practice-target").value = p.target;
+      if ($("#practice-rate")) $("#practice-rate").value = p.coinRate ?? 1;
       $("#practice-save").textContent = "Сохранить";
       $("#practice-cancel").hidden = false;
       $("#practice-name").focus();

@@ -116,7 +116,7 @@
         ><select id="log-sphere" name="sphereId"></select
         ><label for="log-practice">Занятие</label
         ><select id="log-practice" name="practiceId"></select
-        ><label for="log-note">Что делал</label
+        ><label for="log-rate">Монет за минуту</label><input id="log-rate" name="coinRate" type="number" min="0" max="1000000" step="0.01" value="1"/><label for="log-note">Что делал</label
         ><input
           id="log-note"
           name="note"
@@ -143,6 +143,7 @@
         <p class="field-hint">Можно уточнить длительность перед сохранением.</p>
         <p id="session-error" role="alert"></p>
         <button class="add-block" type="submit">Засчитать время</button>
+        <button type="button" class="quiet-button" id="session-discard">Сбросить таймер без сохранения</button>
       </form>
     </dialog>
   </body>

@@ -149,7 +149,8 @@ function validateDevelopment(s) {
           !sphere(p.sphereId) ||
           !Number.isInteger(p.target) ||
           p.target < 1 ||
-          p.target > 1440,
+          p.target > 1440 ||
+          (p.coinRate !== undefined && (!Number.isFinite(p.coinRate) || p.coinRate < 0 || p.coinRate > 1000000)),
       ))
   )
     return false;

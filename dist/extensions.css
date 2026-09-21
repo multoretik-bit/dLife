@@ -320,3 +320,44 @@
     justify-content: flex-start;
   }
 }
+
+.task-coin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #fff8d6;
+  color: #8c6800;
+  border: 1px solid #fedf68;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.reward-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.quick-coin-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.coin-chip {
+  background: #fdf6d8;
+  border: 1px solid #ebd47c;
+  color: #795b00;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.coin-chip:hover {
+  background: #faeab0;
+  border-color: #d8b843;
+}

@@ -50,7 +50,10 @@ function row(item, date = itemDate(item, state.blocks)) {
   const key = completionKey(item, date),
     done = state.done[key],
     s = sphereFor(item.sphereId);
-  return `<div class="activity-wrap" style="--item-color:${s.color}"><label class="activity-row"><input type="checkbox" data-item="${esc(item.id)}" data-date="${date}" ${done ? "checked" : ""} ${busy || date > dateKey() ? "disabled" : ""}><span class="activity-check"></span><span class="activity-name">${esc(item.name)}${item.time ? `<small>${item.time}${item.weekly ? " · каждую неделю" : ""}</small>` : ""}</span><span class="sphere-dot" title="${esc(s.name)}"></span></label>${item.type === "habit" ? habitBar(item, state.done, date) : ""}</div>`;
+  const coinsBadge = item.coins
+    ? `<span class="task-coin-badge" title="Награда: ${item.coins} монет">+${item.coins} 🪙</span>`
+    : "";
+  return `<div class="activity-wrap" style="--item-color:${s.color}"><label class="activity-row"><input type="checkbox" data-item="${esc(item.id)}" data-date="${date}" ${done ? "checked" : ""} ${busy || date > dateKey() ? "disabled" : ""}><span class="activity-check"></span><span class="activity-name">${esc(item.name)}${coinsBadge}${item.time ? `<small>${item.time}${item.weekly ? " · каждую неделю" : ""}</small>` : ""}</span><span class="sphere-dot" title="${esc(s.name)}"></span></label>${item.type === "habit" ? habitBar(item, state.done, date) : ""}</div>`;
 }
 const rows = (items, date) =>
   items.length
@@ -231,6 +234,7 @@ function setKind(value) {
   kind = value;
   editing = null;
   $("#entity-form").reset();
+  if ($("#item-coins")) $("#item-coins").value = "0";
   for (const b of document.querySelectorAll("[data-kind]"))
     b.setAttribute("aria-selected", String(b.dataset.kind === kind));
   $("#editor-title").textContent =
@@ -280,7 +284,7 @@ function renderLibrary() {
     ? list
         .map(
           (i) =>
-            `<div class="library-row"><span class="sphere-dot" style="background:${sphereFor(i.sphereId).color}"></span><div><strong>${esc(i.name)}</strong><small>${kind === "block" ? `${i.start} — ${i.end}` : esc(state.blocks.find((b) => b.id === i.blockId)?.name || "На весь день")}${i.date ? " · " + i.date : ""}${i.weekly ? " · еженедельно" : ""}</small></div><button type="button" data-edit="${esc(i.id)}" aria-label="Изменить ${esc(i.name)}">Изменить</button><button type="button" data-delete="${esc(i.id)}" class="delete" aria-label="Удалить ${esc(i.name)}">×</button></div>`,
+            `<div class="library-row"><span class="sphere-dot" style="background:${sphereFor(i.sphereId).color}"></span><div><strong>${esc(i.name)}</strong><small>${kind === "block" ? `${i.start} — ${i.end}` : esc(state.blocks.find((b) => b.id === i.blockId)?.name || "На весь день")}${i.coins ? ` · +${i.coins} 🪙` : ""}${i.date ? " · " + i.date : ""}${i.weekly ? " · еженедельно" : ""}</small></div><button type="button" data-edit="${esc(i.id)}" aria-label="Изменить ${esc(i.name)}">Изменить</button><button type="button" data-delete="${esc(i.id)}" class="delete" aria-label="Удалить ${esc(i.name)}">×</button></div>`,
         )
         .join("")
     : '<p class="empty-line">Здесь пока ничего нет.</p>';
@@ -308,6 +312,14 @@ $("#add-dated-task").addEventListener("click", () =>
 for (const b of document.querySelectorAll("[data-kind]"))
   b.addEventListener("click", () => setKind(b.dataset.kind));
 $("#cancel-edit").addEventListener("click", () => setKind(kind));
+document.querySelectorAll(".coin-chip").forEach((chip) => {
+  chip.addEventListener("click", () => {
+    const input = $("#item-coins");
+    if (input && chip.dataset.coins) {
+      input.value = chip.dataset.coins;
+    }
+  });
+});
 $("#entity-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   if (busy) return;

@@ -267,7 +267,6 @@ $("#timer-toggle")?.addEventListener("click", async () => {
     const sphereId = $("#timer-sphere")?.value || "10";
     next.timer = {
       startedAt: Date.now(),
-      coinRate: Number($("#timer-rate")?.value) || 0,
       sphereId,
     };
     await commit(next);
@@ -350,13 +349,27 @@ function fillPractices() {
   const id = $("#log-sphere")?.value || "10";
   const practiceSelect = $("#log-practice");
   if (!practiceSelect) return;
+  const list = (state?.practices || []).filter((p) => p.sphereId === id);
   practiceSelect.innerHTML =
-    '<option value="">Другое занятие</option>' +
-    (state?.practices || [])
-      .filter((p) => p.sphereId === id)
-      .map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`)
+    '<option value="" data-rate="1">Другое занятие (1 🪙/мин)</option>' +
+    list
+      .map((p) => {
+        const rate = p.coinRate ?? 1;
+        return `<option value="${esc(p.id)}" data-rate="${rate}">${esc(p.name)} (${rate} 🪙/мин)</option>`;
+      })
       .join("");
+  syncPracticeRate();
   updateDialogTheme();
+}
+
+function syncPracticeRate() {
+  const practiceSelect = $("#log-practice");
+  const selectedOption = practiceSelect?.selectedOptions?.[0];
+  const rateInput = $("#log-rate");
+  if (rateInput) {
+    const r = selectedOption?.dataset?.rate;
+    rateInput.value = r !== undefined && r !== "" ? r : "1";
+  }
 }
 
 function updateDialogTheme() {
@@ -380,11 +393,6 @@ function openSession(value) {
   }
   fillPractices();
   if ($("#log-minutes")) $("#log-minutes").value = value;
-  if ($("#log-rate")) {
-    $("#log-rate").value = stopAt
-      ? state?.timer?.coinRate || 0
-      : Number($("#timer-rate")?.value) || 0;
-  }
   if ($("#log-date")) {
     $("#log-date").value = dateKey();
     $("#log-date").max = dateKey();
@@ -395,6 +403,7 @@ function openSession(value) {
 }
 
 $("#log-sphere")?.addEventListener("change", fillPractices);
+$("#log-practice")?.addEventListener("change", syncPracticeRate);
 $("#log-note")?.addEventListener("input", (e) => {
   const detected = detectAspectFromText(e.target.value);
   if (detected && $("#log-sphere") && $("#log-sphere").value !== detected) {

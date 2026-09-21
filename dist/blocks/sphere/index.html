@@ -107,35 +107,60 @@
           <div id="sphere-practices"></div>
           <form id="practice-form" class="practice-form">
             <div>
-              <label for="practice-name">Название занятия</label
-              ><input
+              <label for="practice-name">Название занятия</label>
+              <input
                 id="practice-name"
                 required
                 maxlength="100"
                 placeholder="Например, чтение"
               />
             </div>
-            <div>
-              <label for="practice-target">Минут в день</label
-              ><input
-                id="practice-target"
-                type="number"
-                min="1"
-                max="1440"
-                value="30"
-                required
-              />
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div>
+                <label for="practice-target">Минут в день</label>
+                <input
+                  id="practice-target"
+                  type="number"
+                  min="1"
+                  max="1440"
+                  value="30"
+                  required
+                />
+              </div>
+              <div>
+                <label for="practice-rate">Монет за минуту</label>
+                <input
+                  id="practice-rate"
+                  type="number"
+                  min="0"
+                  max="1000000"
+                  step="0.01"
+                  value="1"
+                  required
+                />
+              </div>
             </div>
-            <button class="add-block" type="submit" id="practice-save">
-              Добавить</button
-            ><button
-              type="button"
-              class="quiet-button"
-              id="practice-cancel"
-              hidden
-            >
-              Отмена
-            </button>
+            <div class="practice-rate-presets">
+              <span style="font-size:12px;color:#678294">Награда за минуту:</span>
+              <button type="button" class="practice-rate-chip" data-rate="0.5">0.5</button>
+              <button type="button" class="practice-rate-chip" data-rate="1">1</button>
+              <button type="button" class="practice-rate-chip" data-rate="2">2</button>
+              <button type="button" class="practice-rate-chip" data-rate="5">5</button>
+              <button type="button" class="practice-rate-chip" data-rate="10">10</button>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:12px">
+              <button class="add-block" type="submit" id="practice-save">
+                Добавить
+              </button>
+              <button
+                type="button"
+                class="quiet-button"
+                id="practice-cancel"
+                hidden
+              >
+                Отмена
+              </button>
+            </div>
           </form>
         </section>
         <section class="development-panel" data-section="results">
