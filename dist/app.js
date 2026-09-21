@@ -16,21 +16,19 @@ document.addEventListener("visibilitychange", () => {
 });
 const dialog = document.querySelector("#share-dialog");
 document.querySelector("#share").addEventListener("click", () => {
-  document.querySelector("#embed-url").value = new URL(
-    location.pathname.includes("/aspects")
-      ? "/embed/aspects/"
+  const type = location.pathname.includes("/sphere")
+    ? "sphere"
+    : location.pathname.includes("/aspects")
+      ? "aspects"
       : location.pathname.includes("/now")
-        ? "/embed/now/"
-        : "/embed/profile/",
+        ? "now"
+        : "profile";
+  const suffix = type === "sphere" ? location.search : "";
+  document.querySelector("#embed-url").value = new URL(
+    "/embed/" + type + "/" + suffix,
     location.origin,
   ).href;
-  document.querySelector("#standalone").href = location.pathname.includes(
-    "/aspects",
-  )
-    ? "/blocks/aspects/"
-    : location.pathname.includes("/now")
-      ? "/blocks/now/"
-      : "/blocks/profile/";
+  document.querySelector("#standalone").href = "/blocks/" + type + "/" + suffix;
   dialog.showModal();
 });
 dialog.addEventListener("click", (e) => {

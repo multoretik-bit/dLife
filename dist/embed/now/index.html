@@ -4,11 +4,12 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#174c6c" />
-    <title>dLife — Сейчас</title>
+    <title>dLife — Задачи</title>
     <link rel="icon" href="/assets/favicon.svg" />
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/now.css" />
     <link rel="stylesheet" href="/design.css" />
+    <link rel="stylesheet" href="/features.css" />
     <script type="module" src="/app.js"></script>
     <script type="module" src="/now.js"></script>
   </head>
@@ -24,7 +25,7 @@
         /></a>
         <nav aria-label="Основная навигация">
           <a href="/">Профиль</a
-          ><a class="nav-current" href="/now/" aria-current="page">Сегодня</a>
+          ><a class="nav-current" href="/now/" aria-current="page">Задачи</a>
           <a href="/aspects/">Аспекты</a>
         </nav>
         <div class="header-actions">
@@ -74,57 +75,106 @@
           </div>
           <button class="add-block" type="button">＋ Добавить блок</button>
         </div>
-        <div class="day-layout">
-          <aside class="day-rail" aria-label="Расписание дня">
-            <div class="rail-caption">В ТВОЁМ РИТМЕ</div>
-            <div id="day-timeline"></div>
-          </aside>
-          <div class="day-content">
-            <section id="load-error" hidden class="load-error">
-              <p id="load-error-text"></p>
-              <button id="retry">Попробовать ещё раз</button>
-            </section>
-            <article class="now-card" id="now-card" hidden>
-              <div class="block-hero">
-                <div class="block-copy">
-                  <div class="eyebrow" id="block-eyebrow"></div>
-                  <h1 id="block-title"></h1>
-                  <p class="block-meta">
-                    <span id="block-time"></span
-                    ><span class="sphere-tag"
-                      ><i></i><span id="block-sphere"></span
-                    ></span>
-                  </p>
-                  <p class="remainder" id="block-remainder"></p>
-                  <p id="rest-copy"></p>
-                </div>
-                <div class="card-landscape" aria-hidden="true">
-                  <i></i><i></i><i></i>
-                </div>
-                <div class="abstract-mark" aria-hidden="true">✳</div>
-                <div
-                  class="sphere-art"
-                  id="now-visual"
-                  aria-hidden="true"
-                ></div>
-              </div>
-              <div class="block-items" id="block-items">
-                <section>
-                  <h2>Привычки</h2>
-                  <div id="habit-list"></div>
-                </section>
-                <section>
-                  <h2>Задачи</h2>
-                  <div id="task-list"></div>
-                </section>
-              </div>
-              <footer class="block-footer">
-                <span id="next-block"></span
-                ><button id="block-link">Ссылка на этот блок ↗</button>
-              </footer>
-            </article>
-          </div>
+        <div class="view-switch" role="tablist" aria-label="Период задач">
+          <button role="tab" data-view="now" aria-selected="true">Сейчас</button
+          ><button role="tab" data-view="today" aria-selected="false">
+            Сегодня</button
+          ><button role="tab" data-view="month" aria-selected="false">
+            Месяц
+          </button>
         </div>
+        <div id="view-now">
+          <div class="day-layout">
+            <aside class="day-rail" aria-label="Расписание дня">
+              <div class="rail-caption">В ТВОЁМ РИТМЕ</div>
+              <div id="day-timeline"></div>
+            </aside>
+            <div class="day-content">
+              <section id="load-error" hidden class="load-error">
+                <p id="load-error-text"></p>
+                <button id="retry">Попробовать ещё раз</button>
+              </section>
+              <article class="now-card" id="now-card" hidden>
+                <div class="block-hero">
+                  <div class="block-copy">
+                    <div class="eyebrow" id="block-eyebrow"></div>
+                    <h1 id="block-title"></h1>
+                    <p class="block-meta">
+                      <span id="block-time"></span
+                      ><span class="sphere-tag"
+                        ><i></i><span id="block-sphere"></span
+                      ></span>
+                    </p>
+                    <p class="remainder" id="block-remainder"></p>
+                    <p id="rest-copy"></p>
+                  </div>
+                  <div class="card-landscape" aria-hidden="true">
+                    <i></i><i></i><i></i>
+                  </div>
+                  <div class="abstract-mark" aria-hidden="true">✳</div>
+                  <div
+                    class="sphere-art"
+                    id="now-visual"
+                    aria-hidden="true"
+                  ></div>
+                </div>
+                <div class="block-items" id="block-items">
+                  <section>
+                    <h2>Привычки</h2>
+                    <div id="habit-list"></div>
+                  </section>
+                  <section>
+                    <h2>Задачи</h2>
+                    <div id="task-list"></div>
+                  </section>
+                </div>
+                <footer class="block-footer">
+                  <span id="next-block"></span
+                  ><button id="block-link">Ссылка на этот блок ↗</button>
+                </footer>
+              </article>
+            </div>
+          </div>
+          <section class="daily-columns" id="daily-columns">
+            <div>
+              <div class="section-title">
+                <h2>Задачи на день</h2>
+                <button data-add="task">＋</button>
+              </div>
+              <div id="daily-tasks"></div>
+            </div>
+            <div>
+              <div class="section-title">
+                <h2>Привычки на день</h2>
+                <button data-add="habit">＋</button>
+              </div>
+              <div id="daily-habits"></div>
+            </div>
+          </section>
+        </div>
+        <section id="view-today" hidden>
+          <div id="full-day"></div>
+          <div id="today-daily" class="daily-columns"></div>
+        </section>
+        <section id="view-month" hidden>
+          <div class="month-heading">
+            <button id="month-prev" aria-label="Предыдущий месяц">←</button>
+            <h2 id="month-title"></h2>
+            <button id="month-next" aria-label="Следующий месяц">→</button>
+          </div>
+          <div class="calendar-weekdays">
+            <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span
+            ><span>Пт</span><span>Сб</span><span>Вс</span>
+          </div>
+          <div class="calendar-grid" id="calendar-grid"></div>
+          <div class="selected-day">
+            <div class="section-title">
+              <h2 id="selected-date"></h2>
+              <button id="add-dated-task">＋ Задача</button>
+            </div>
+            <div id="date-tasks"></div>
+          </div>
+        </section>
         <div id="notice" role="status" aria-live="polite"></div>
       </main>
     </div>
@@ -174,6 +224,26 @@
                 Сначала создайте блок во вкладке «Блоки».
               </p>
             </div>
+            <div id="task-schedule" hidden>
+              <div class="timing">
+                <div>
+                  <label for="task-date">Дата задачи</label
+                  ><input type="date" id="task-date" name="date" />
+                </div>
+                <div>
+                  <label for="task-time">Время · необязательно</label
+                  ><input type="time" id="task-time" name="time" />
+                </div>
+              </div>
+              <label class="weekly-label"
+                ><input type="checkbox" id="task-weekly" name="weekly" />
+                Повторять каждую неделю</label
+              >
+            </div>
+            <p id="habit-explainer" hidden class="field-hint">
+              21 день подряд — привычка внедрена. Пропущенный день обнуляет
+              серию.
+            </p>
             <fieldset>
               <legend>Сфера жизни и цвет</legend>
               <div id="sphere-options"></div>

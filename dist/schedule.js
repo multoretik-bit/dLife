@@ -97,7 +97,7 @@ export function validateState(state) {
       typeof i.id !== "string" ||
       i.id.length > 80 ||
       itemIds.has(i.id) ||
-      !ids.has(i.blockId) ||
+      (i.blockId !== "" && !ids.has(i.blockId)) ||
       !["habit", "task"].includes(i.type) ||
       typeof i.name !== "string" ||
       !i.name.trim() ||
@@ -105,10 +105,88 @@ export function validateState(state) {
       !SPHERES.some((s) => s.id === i.sphereId)
     )
       return false;
+    if (i.date !== undefined && i.date !== "" && !validDate(i.date))
+      return false;
+    if (i.time !== undefined && i.time !== "" && minutes(i.time) === null)
+      return false;
+    if (i.weekly !== undefined && typeof i.weekly !== "boolean") return false;
+    if (i.weekly && !validDate(i.date)) return false;
     itemIds.add(i.id);
   }
+  if (!validateDevelopment(state)) return false;
   return Object.entries(state.done).every(
     ([key, val]) => key.length < 200 && typeof val === "boolean",
   );
 }
 export const emptyState = () => ({ blocks: [], items: [], done: {} });
+
+export function validDate(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value))
+    return false;
+  const d = new Date(value + "T12:00:00Z");
+  return !Number.isNaN(+d) && d.toISOString().slice(0, 10) === value;
+}
+function validateDevelopment(s) {
+  const text = (v, n) => typeof v === "string" && v.length <= n;
+  const sphere = (id) => SPHERES.some((s) => s.id === id);
+  const unique = (a) => new Set(a.map((x) => x.id)).size === a.length;
+  if (
+    s.practices !== undefined &&
+    (!Array.isArray(s.practices) ||
+      s.practices.length > 500 ||
+      !unique(s.practices) ||
+      s.practices.some(
+        (p) =>
+          !text(p.id, 80) ||
+          !p.id ||
+          !text(p.name, 100) ||
+          !p.name.trim() ||
+          !sphere(p.sphereId) ||
+          !Number.isInteger(p.target) ||
+          p.target < 1 ||
+          p.target > 1440,
+      ))
+  )
+    return false;
+  if (
+    s.logs !== undefined &&
+    (!Array.isArray(s.logs) ||
+      s.logs.length > 10000 ||
+      !unique(s.logs) ||
+      s.logs.some(
+        (l) =>
+          !text(l.id, 80) ||
+          !sphere(l.sphereId) ||
+          !text(l.practiceId, 80) ||
+          !text(l.note, 300) ||
+          !validDate(l.date) ||
+          !Number.isFinite(l.minutes) ||
+          l.minutes <= 0 ||
+          l.minutes > 1440,
+      ))
+  )
+    return false;
+  if (
+    s.spherePlans !== undefined &&
+    (!s.spherePlans ||
+      Array.isArray(s.spherePlans) ||
+      typeof s.spherePlans !== "object" ||
+      Object.entries(s.spherePlans).some(
+        ([id, p]) =>
+          !sphere(id) ||
+          !p ||
+          !text(p.vision, 5000) ||
+          !text(p.tools, 5000) ||
+          !text(p.results, 5000) ||
+          (p.deadline !== "" && !validDate(p.deadline)),
+      ))
+  )
+    return false;
+  if (
+    s.timer !== undefined &&
+    s.timer !== null &&
+    (!Number.isSafeInteger(s.timer.startedAt) || s.timer.startedAt < 0)
+  )
+    return false;
+  return true;
+}

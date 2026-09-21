@@ -1,0 +1,657 @@
+.view-switch {
+  display: flex;
+  gap: 6px;
+  margin: -8px 0 30px;
+  padding: 5px;
+  width: fit-content;
+  border-radius: 28px;
+  background: #edf4f8;
+}
+.view-switch button {
+  border: 0;
+  background: none;
+  border-radius: 23px;
+  padding: 12px 27px;
+  color: #587489;
+  font-size: 15px;
+}
+.view-switch button[aria-selected="true"] {
+  background: #197eaf;
+  color: #fff;
+}
+.section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.section-title h2,
+.section-title h3 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: -0.035em;
+}
+.section-title > button {
+  border: 0;
+  border-radius: 30px;
+  padding: 10px 16px;
+  background: #e0f1fc;
+  color: #176b98;
+  min-height: 44px;
+}
+.daily-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin: 32px 0;
+}
+.daily-columns > div,
+.daily-columns > section {
+  padding: 26px;
+  background: #f0f8fd;
+  border-radius: 22px;
+  min-width: 0;
+}
+.daily-columns .activity-name {
+  font-size: 17px;
+}
+.daily-columns h2 {
+  font-size: 23px;
+  letter-spacing: -0.04em;
+}
+.activity-name small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6d8190;
+}
+.activity-wrap {
+  padding-bottom: 8px;
+}
+.habit-progress {
+  padding: 0 0 10px 41px;
+}
+.habit-segments {
+  display: grid;
+  grid-template-columns: repeat(21, 1fr);
+  gap: 3px;
+  height: 9px;
+}
+.habit-segments i {
+  background: #819cab24;
+  border-radius: 3px;
+}
+.habit-segments i.filled {
+  background: var(--item-color);
+  box-shadow: inset 0 0 0 1px #0001;
+}
+.habit-progress small {
+  display: block;
+  margin-top: 7px;
+  color: #5b7a8f;
+  font-size: 12px;
+}
+.schedule-block {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 24px;
+  margin-bottom: 22px;
+}
+.schedule-time {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  font-size: 18px;
+  padding: 25px 0;
+  position: relative;
+}
+.schedule-time:after {
+  content: "";
+  width: 2px;
+  background: #dceaf3;
+  flex: 1;
+  min-height: 30px;
+}
+.schedule-time span {
+  font-size: 14px;
+  color: #8196a4;
+  order: 3;
+}
+.schedule-body {
+  padding: 28px 32px;
+  border-radius: 22px;
+  background: #e4f4fd;
+  border-left: 5px solid var(--sphere);
+}
+.schedule-body .activity-wrap {
+  max-width: 800px;
+}
+.month-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 12px 0 25px;
+}
+.month-heading h2 {
+  font-size: 27px;
+  text-transform: capitalize;
+}
+.month-heading button {
+  border: 1px solid #d7e4ed;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  background: white;
+  color: #26799d;
+}
+.calendar-weekdays,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+.calendar-weekdays {
+  text-align: center;
+  color: #728696;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.calendar-day {
+  min-height: 120px;
+  text-align: left;
+  border: 1px solid #e1ebf0;
+  border-radius: 14px;
+  padding: 12px;
+  background: #f4f9fc;
+  color: #23455b;
+  overflow: hidden;
+}
+.calendar-day > span {
+  display: block;
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.calendar-day small {
+  display: block;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  padding: 4px 6px;
+  border-left: 3px solid var(--task-color);
+  font-size: 12px;
+  background: #fff;
+  margin-bottom: 4px;
+  border-radius: 4px;
+}
+.calendar-day em {
+  font-size: 11px;
+  font-style: normal;
+}
+.calendar-day.outside {
+  opacity: 0.4;
+}
+.calendar-day.is-today > span {
+  color: #0088c6;
+}
+.calendar-day.selected {
+  outline: 2px solid #2595c9;
+  background: #e0f3fd;
+}
+.selected-day {
+  margin-top: 28px;
+  padding: 28px;
+  border-radius: 22px;
+  background: #edf8fe;
+}
+.selected-day .activity-wrap {
+  max-width: 760px;
+}
+.weekly-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+.weekly-label input {
+  width: 19px;
+  height: 19px;
+}
+.field-hint {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #678294;
+}
+.time-studio {
+  background: #daf1fe;
+  border-radius: 25px;
+  padding: 32px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: 32px;
+  position: relative;
+  overflow: hidden;
+}
+.time-studio .eyebrow {
+  font-size: 12px;
+}
+.timer-clock {
+  font-size: 64px;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.timer-controls {
+  text-align: right;
+  position: relative;
+  z-index: 1;
+}
+.timer-controls p {
+  font-size: 14px;
+  color: #52728a;
+  max-width: 330px;
+  margin: 0 0 18px;
+}
+.quiet-button {
+  border: 0;
+  background: transparent;
+  color: #236987;
+  padding: 10px 12px;
+  font-size: 14px;
+  min-height: 44px;
+}
+.timer-controls .quiet-button {
+  display: block;
+  margin: 8px 0 0 auto;
+}
+.goals-overview {
+  margin-bottom: 42px;
+}
+.goals-overview .section-title h2 {
+  font-size: 22px;
+}
+.goals-overview .date-label {
+  color: #82929f;
+  font-size: 13px;
+}
+.practice-progress {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.practice-card {
+  text-decoration: none;
+  color: #213f53;
+  padding: 20px;
+  background: #f0f7fb;
+  border: 1px solid #e4edf3;
+  border-radius: 16px;
+}
+.practice-card > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+}
+.practice-card span {
+  white-space: nowrap;
+  font-size: 13px;
+  color: #587487;
+}
+.practice-card small {
+  font-size: 12px;
+  color: #7c929f;
+}
+.minute-track {
+  height: 13px;
+  background: #dce8ee;
+  border-radius: 9px;
+  overflow: hidden;
+  margin: 13px 0 8px;
+}
+.minute-track i {
+  display: block;
+  height: 100%;
+  background: var(--practice-color);
+  border-radius: 9px;
+  box-shadow: inset 0 0 0 1px #0001;
+  transition: width 0.3s;
+}
+.sphere-link {
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.2s;
+}
+.sphere-link:hover {
+  background: #dff2fc;
+}
+.sphere-panel strong small {
+  font-size: 18px;
+}
+.time-history {
+  margin-top: 34px;
+}
+.time-history h2 {
+  font-size: 23px;
+}
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 17px 0;
+  border-bottom: 1px solid #e0eaf0;
+  font-size: 15px;
+}
+.history-row i {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+}
+.history-row > div {
+  flex: 1;
+}
+.history-row small {
+  display: block;
+  color: #80929f;
+  font-size: 12px;
+  margin-top: 5px;
+}
+.history-row b {
+  font-size: 15px;
+  font-weight: 500;
+}
+.back-link {
+  color: #53819e;
+  text-decoration: none;
+  font-size: 14px;
+}
+.sphere-page-heading {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  margin: 26px 0;
+}
+.sphere-page-heading h1 {
+  font-size: 45px;
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  margin: 0;
+}
+.sphere-page-heading > span {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+}
+.development-panel {
+  background: #eef8fe;
+  border-radius: 24px;
+  padding: 32px;
+  margin: 24px 0;
+  border-top: 4px solid var(--sphere-accent);
+}
+.development-panel .eyebrow {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  margin: 0 0 10px;
+}
+.development-panel textarea {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.7;
+  color: #264b60;
+  background: #ffffffc0;
+  border: 1px solid #cddfe9;
+  border-radius: 13px;
+  padding: 16px;
+}
+.development-panel label {
+  display: block;
+  font-size: 14px;
+  color: #507186;
+  margin: 16px 0 8px;
+}
+.development-panel input {
+  max-width: 100%;
+  background: #fff;
+  border: 1px solid #cddfe9;
+  padding: 12px;
+  border-radius: 10px;
+  font: inherit;
+  color: #254961;
+}
+.development-panel form > .add-block {
+  display: block;
+  margin-top: 20px;
+}
+.development-panel .practice-heading {
+  margin-top: 34px;
+}
+.practice-form {
+  display: grid;
+  grid-template-columns: 1fr 150px auto;
+  gap: 15px;
+  align-items: end;
+}
+.practice-form input {
+  width: 100%;
+}
+.practice-form > .add-block {
+  margin: 0 !important;
+}
+.practice-edit-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid #d9e9f2;
+}
+.practice-edit-row > div {
+  flex: 1;
+}
+.practice-edit-row small {
+  display: block;
+  margin-top: 5px;
+  color: #6f8899;
+  font-size: 13px;
+}
+.sphere-page #sphere-error {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  background: #fbfcfd;
+  color: #2178a2;
+  font-size: 14px;
+}
+.sphere-page #sphere-error:empty {
+  display: none;
+}
+#session-form input,
+#session-form select {
+  width: 100%;
+  font: inherit;
+  color: #26495e;
+}
+#session-form > button {
+  margin-top: 20px;
+}
+#session-error {
+  color: #a82a4d;
+  font-size: 14px;
+}
+.embedded .view-switch,
+.embedded .daily-columns,
+.embedded .sphere-page .back-link,
+.embedded .page-heading {
+  display: none;
+}
+.embedded .development-panel {
+  margin: 0;
+}
+.embedded .sphere-page-heading {
+  padding: 16px 24px;
+  margin: 0;
+}
+.embedded .sphere-page-heading h1 {
+  font-size: 26px;
+}
+.embedded .time-studio {
+  margin: 0 0 24px;
+}
+.embedded .goals-overview,
+.embedded .time-history {
+  margin: 24px;
+}
+.embedded .day-layout {
+  display: block;
+}
+@media (max-width: 760px) {
+  .view-switch {
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+  .view-switch button {
+    flex: 1;
+    padding: 11px 13px;
+    font-size: 14px;
+  }
+  .daily-columns {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .daily-columns > div,
+  .daily-columns > section {
+    padding: 22px;
+  }
+  .section-title h2 {
+    font-size: 21px;
+  }
+  .schedule-block {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 12px;
+  }
+  .schedule-time {
+    font-size: 14px;
+  }
+  .schedule-body {
+    padding: 20px 16px;
+    border-left-width: 3px;
+  }
+  .schedule-body .section-title {
+    display: block;
+  }
+  .schedule-body .sphere-tag {
+    margin-top: 12px;
+  }
+  .schedule-body .activity-name {
+    font-size: 15px;
+  }
+  .habit-progress {
+    padding-left: 0;
+  }
+  .habit-segments {
+    gap: 2px;
+  }
+  .calendar-grid,
+  .calendar-weekdays {
+    gap: 4px;
+  }
+  .calendar-day {
+    min-height: 80px;
+    border-radius: 8px;
+    padding: 7px 3px;
+  }
+  .calendar-day > span {
+    font-size: 14px;
+  }
+  .calendar-day small {
+    font-size: 9px;
+    padding: 2px;
+    border-left-width: 2px;
+  }
+  .calendar-day em {
+    font-size: 10px;
+  }
+  .month-heading h2 {
+    font-size: 21px;
+  }
+  .selected-day {
+    padding: 20px;
+  }
+  .selected-day .section-title {
+    align-items: flex-start;
+  }
+  .selected-day h2 {
+    font-size: 19px;
+  }
+  .selected-day button {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .time-studio {
+    padding: 26px;
+    display: block;
+  }
+  .timer-clock {
+    font-size: 55px;
+  }
+  .timer-controls {
+    text-align: left;
+    margin-top: 20px;
+  }
+  .timer-controls .quiet-button {
+    display: inline-block;
+    margin-left: 8px;
+  }
+  .timer-controls p {
+    font-size: 13px;
+  }
+  .practice-progress {
+    grid-template-columns: 1fr;
+  }
+  .goals-overview .section-title {
+    display: block;
+  }
+  .goals-overview .date-label {
+    margin-top: 9px;
+  }
+  .sphere-page-heading h1 {
+    font-size: 34px;
+  }
+  .development-panel {
+    padding: 24px 20px;
+  }
+  .development-panel .section-title {
+    gap: 8px;
+  }
+  .development-panel .section-title button {
+    padding: 8px;
+    font-size: 12px;
+  }
+  .practice-form {
+    grid-template-columns: 1fr 90px;
+    gap: 12px;
+  }
+  .practice-form > .add-block {
+    grid-column: 1/-1;
+  }
+  .practice-edit-row {
+    gap: 2px;
+  }
+  .practice-edit-row button {
+    font-size: 12px;
+    padding: 8px;
+  }
+  .embedded .time-studio {
+    margin: 0 16px 24px;
+  }
+}
+@media(max-width:760px){.calendar-day small{display:inline-block;width:7px;height:7px;padding:0;border:0;border-radius:50%;background:var(--task-color);font-size:0;margin:1px 2px}.calendar-day em{display:block;font-size:11px}}

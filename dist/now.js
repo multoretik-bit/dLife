@@ -2,32 +2,38 @@ import {
   SPHERES,
   sphereFor,
   activeBlock,
-  blockDate,
   validateBlock,
   remainingMinutes,
+  dateKey,
 } from "./schedule.js";
 import { ScheduleStore } from "./store.js";
-const $ = (s) => document.querySelector(s);
-const esc = (s) =>
-  String(s).replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        c
-      ],
-  );
-const store = new ScheduleStore();
+import {
+  escapeHTML as esc,
+  occurs,
+  completionKey,
+  itemDate,
+  habitBar,
+} from "./development.js";
+const $ = (s) => document.querySelector(s),
+  store = new ScheduleStore();
 let state = null,
   busy = false,
   kind = "block",
-  editing = null;
+  editing = null,
+  view = "now",
+  selectedDate = dateKey(),
+  month = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 const selectedId = new URLSearchParams(location.search).get("id");
-const sprite = (id) => {
-  const n = Number(id) - 1;
-  return `--sprite-x:${(n % 5) * 25}%;--sprite-y:${n < 5 ? 0 : 100}%`;
-};
-const doneKey = (item, block) =>
-  item.type === "habit" ? `${blockDate(block)}:${item.id}` : `task:${item.id}`;
+const dateLabel = (key) =>
+  new Intl.DateTimeFormat("ru-RU", {
+    day: "numeric",
+    month: "long",
+    weekday: "long",
+  }).format(new Date(key + "T12:00:00"));
+function notice(message, error = false) {
+  $("#notice").textContent = message;
+  $("#notice").classList.toggle("error", error);
+}
 async function load() {
   try {
     state = await store.load();
@@ -39,114 +45,190 @@ async function load() {
     $("#now-card").hidden = true;
   }
 }
+function row(item, date = itemDate(item, state.blocks)) {
+  const key = completionKey(item, date),
+    done = state.done[key],
+    s = sphereFor(item.sphereId);
+  return `<div class="activity-wrap" style="--item-color:${s.color}"><label class="activity-row"><input type="checkbox" data-item="${esc(item.id)}" data-date="${date}" ${done ? "checked" : ""} ${busy || date > dateKey() ? "disabled" : ""}><span class="activity-check"></span><span class="activity-name">${esc(item.name)}${item.time ? `<small>${item.time}${item.weekly ? " · каждую неделю" : ""}</small>` : ""}</span><span class="sphere-dot" title="${esc(s.name)}"></span></label>${item.type === "habit" ? habitBar(item, state.done, date) : ""}</div>`;
+}
+const rows = (items, date) =>
+  items.length
+    ? items.map((i) => row(i, date)).join("")
+    : '<p class="empty-line">Пока ничего не запланировано</p>';
 function render() {
   if (!state) return;
   const now = new Date(),
+    today = dateKey(now),
     block = selectedId
       ? state.blocks.find((b) => b.id === selectedId)
-      : activeBlock(state.blocks, now);
-  const card = $("#now-card");
+      : activeBlock(state.blocks, now),
+    sphere = sphereFor(block?.sphereId || "6"),
+    card = $("#now-card");
   card.hidden = false;
-  const unknown = selectedId && !block;
-  const timeline = $("#day-timeline");
-  if (timeline)
-    timeline.innerHTML = state.blocks.length
-      ? [...state.blocks]
-          .sort((a, b) => a.start.localeCompare(b.start))
-          .map(
-            (b) =>
-              `<a class="timeline-entry ${b.id === block?.id ? "is-current" : ""}" href="/blocks/now/?id=${encodeURIComponent(b.id)}" style="--entry-color:${sphereFor(b.sphereId).color}"><time>${b.start}</time><i></i><strong>${esc(b.name)}</strong><small>${b.end}</small></a>`,
-          )
-          .join("")
-      : '<div class="timeline-empty"><time>Сейчас</time><i></i><strong>Свободное время</strong><p>Твой день начинается<br>с первого блока.</p></div>';
-
-  const sphere = sphereFor(block?.sphereId || "6");
   card.style.setProperty("--sphere", sphere.color);
   card.classList.toggle("is-rest", !block);
-  $("#now-visual").style.cssText = sprite(sphere.id);
-  $("#block-title").textContent = unknown
-    ? "Блок не найден"
-    : block?.name || "Время отдохнуть";
+  const n = Number(sphere.id) - 1;
+  $("#now-visual").style.cssText =
+    `--sprite-x:${(n % 5) * 25}%;--sprite-y:${n < 5 ? 0 : 100}%`;
+  $("#block-title").textContent =
+    selectedId && !block ? "Блок не найден" : block?.name || "Время отдохнуть";
   $("#block-time").textContent = block ? `${block.start} — ${block.end}` : "";
-  $("#block-sphere").textContent = unknown ? "" : sphere.name;
+  $("#block-sphere").textContent = sphere.name;
   $("#block-eyebrow").textContent = selectedId
     ? "ВАШ БЛОК"
     : block
       ? "СЕЙЧАС"
       : "СВОБОДНОЕ ВРЕМЯ";
+  const rem = block ? remainingMinutes(block, now) : 0;
   $("#block-remainder").textContent =
-    block && !selectedId ? `До конца ${remainingMinutes(block, now)} мин` : "";
+    block && !selectedId
+      ? `До конца ${Math.floor(rem / 60) ? Math.floor(rem / 60) + " ч " : ""}${rem % 60} мин`
+      : "";
   $("#rest-copy").hidden = !!block;
-  $("#rest-copy").textContent = unknown
+  $("#rest-copy").textContent = selectedId
     ? "Этот блок был удалён."
     : state.blocks.length
       ? "Сейчас нет запланированного блока."
-      : "Расписание пока пусто. Создайте первый блок через шестерёнку.";
+      : "Добавь первый блок и задай ритм своему дню.";
   $("#block-items").hidden = !block;
   $("#block-link").hidden = !block;
   if (block) {
     $("#block-link").dataset.blockId = block.id;
-    for (const type of ["habit", "task"]) {
-      const items = state.items.filter(
-        (i) => i.blockId === block.id && i.type === type,
+    for (const type of ["habit", "task"])
+      $(`#${type}-list`).innerHTML = rows(
+        state.items.filter(
+          (i) =>
+            i.blockId === block.id &&
+            i.type === type &&
+            occurs(i, itemDate(i, state.blocks)),
+        ),
       );
-      $(`#${type}-list`).innerHTML = items.length
-        ? items
-            .map(
-              (i) =>
-                `<label class="activity-row" style="--item-color:${sphereFor(i.sphereId).color}"><input type="checkbox" data-item="${esc(i.id)}" ${state.done[doneKey(i, block)] ? "checked" : ""} ${busy ? "disabled" : ""}><span class="activity-check"></span><span class="activity-name">${esc(i.name)}</span><span class="sphere-dot" title="${esc(sphereFor(i.sphereId).name)}"></span></label>`,
-            )
-            .join("")
-        : `<p class="empty-line">${type === "habit" ? "Привычек пока нет" : "Задач пока нет"}</p>`;
-    }
   }
-  const next = state.blocks
-    .map((b) => ({
-      ...b,
-      distance:
-        (Number(b.start.slice(0, 2)) * 60 +
-          Number(b.start.slice(3)) -
-          (now.getHours() * 60 + now.getMinutes()) +
-          1440) %
-        1440,
-    }))
-    .filter((b) => b.id !== block?.id)
-    .sort((a, b) => a.distance - b.distance)[0];
+  const ordered = [...state.blocks].sort((a, b) =>
+    a.start.localeCompare(b.start),
+  );
+  $("#day-timeline").innerHTML = ordered.length
+    ? ordered
+        .map(
+          (b) =>
+            `<a class="timeline-entry ${b.id === block?.id ? "is-current" : ""}" href="/blocks/now/?id=${encodeURIComponent(b.id)}" style="--entry-color:${sphereFor(b.sphereId).color}"><time>${b.start}</time><i></i><strong>${esc(b.name)}</strong><small>${b.end}</small></a>`,
+        )
+        .join("")
+    : '<div class="timeline-empty"><time>Сейчас</time><i></i><strong>Свободное время</strong></div>';
+  const next = ordered.find(
+    (b) =>
+      b.start >
+      `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
+  );
   $("#next-block").textContent = next
     ? `Далее · ${next.start} · ${next.name}`
     : "";
+  const daily = (type) =>
+    state.items
+      .filter((i) => !i.blockId && i.type === type && occurs(i, today))
+      .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+  $("#daily-tasks").innerHTML = rows(daily("task"), today);
+  $("#daily-habits").innerHTML = rows(daily("habit"), today);
+  $("#full-day").innerHTML = ordered.length
+    ? ordered
+        .map(
+          (b) =>
+            `<article class="schedule-block" style="--sphere:${sphereFor(b.sphereId).color}"><div class="schedule-time"><strong>${b.start}</strong><span>${b.end}</span></div><div class="schedule-body"><div class="section-title"><h2>${esc(b.name)}</h2><span class="sphere-tag"><i></i>${esc(sphereFor(b.sphereId).name)}</span></div>${rows(
+              state.items.filter((i) => i.blockId === b.id && occurs(i, today)),
+              today,
+            )}</div></article>`,
+        )
+        .join("")
+    : '<p class="empty-line">Создай блок, чтобы увидеть расписание дня.</p>';
+  $("#today-daily").innerHTML =
+    `<section><h2>Задачи на день</h2>${rows(daily("task"), today)}</section><section><h2>Привычки на день</h2>${rows(daily("habit"), today)}</section>`;
+  renderMonth();
 }
-$("#block-items").addEventListener("change", async (e) => {
+function renderMonth() {
+  const title = new Intl.DateTimeFormat("ru-RU", {
+    month: "long",
+    year: "numeric",
+  }).format(month);
+  $("#month-title").textContent = title;
+  const offset = (month.getDay() + 6) % 7,
+    start = new Date(month.getFullYear(), month.getMonth(), 1 - offset),
+    count =
+      Math.ceil(
+        (offset +
+          new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()) /
+          7,
+      ) * 7;
+  $("#calendar-grid").innerHTML = Array.from({ length: count }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    const key = dateKey(d),
+      tasks = state.items.filter(
+        (t) => t.type === "task" && t.date && occurs(t, key),
+      );
+    return `<button class="calendar-day ${d.getMonth() !== month.getMonth() ? "outside" : ""} ${key === dateKey() ? "is-today" : ""} ${key === selectedDate ? "selected" : ""}" data-calendar-date="${key}" aria-label="${dateLabel(key)}, задач: ${tasks.length}"><span>${d.getDate()}</span>${tasks
+      .slice(0, 3)
+      .map(
+        (t) =>
+          `<small style="--task-color:${sphereFor(t.sphereId).color}">${esc(t.name)}</small>`,
+      )
+      .join(
+        "",
+      )}${tasks.length > 3 ? `<em>+${tasks.length - 3}</em>` : ""}</button>`;
+  }).join("");
+  $("#selected-date").textContent = dateLabel(selectedDate);
+  $("#date-tasks").innerHTML = rows(
+    state.items
+      .filter((t) => t.type === "task" && t.date && occurs(t, selectedDate))
+      .sort((a, b) => (a.time || "").localeCompare(b.time || "")),
+    selectedDate,
+  );
+}
+document.querySelector("main").addEventListener("change", async (e) => {
   const id = e.target.dataset.item;
   if (!id || busy) return;
-  const item = state.items.find((i) => i.id === id),
-    block = state.blocks.find((b) => b.id === item.blockId);
+  const item = state.items.find((i) => i.id === id);
   const next = structuredClone(state);
-  next.done[doneKey(item, block)] = e.target.checked;
+  next.done[completionKey(item, e.target.dataset.date)] = e.target.checked;
   busy = true;
   render();
   try {
     state = await store.save(next);
     notice("Сохранено");
-  } catch (err) {
-    notice(err.message, true);
+  } catch (e) {
+    notice(e.message, true);
   } finally {
     busy = false;
     render();
   }
 });
-function notice(message, error = false) {
-  $("#notice").textContent = message;
-  $("#notice").classList.toggle("error", error);
-  clearTimeout(notice.timer);
-  notice.timer = setTimeout(
-    () => ($("#notice").textContent = ""),
-    error ? 14000 : 2500,
-  );
-}
+for (const b of document.querySelectorAll("[data-view]"))
+  b.addEventListener("click", () => {
+    view = b.dataset.view;
+    for (const v of ["now", "today", "month"])
+      $(`#view-${v}`).hidden = v !== view;
+    for (const t of document.querySelectorAll("[data-view]"))
+      t.setAttribute("aria-selected", String(t === b));
+    render();
+  });
+$("#calendar-grid").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-calendar-date]");
+  if (b) {
+    selectedDate = b.dataset.calendarDate;
+    renderMonth();
+  }
+});
+for (const [id, delta] of [
+  ["month-prev", -1],
+  ["month-next", 1],
+])
+  $("#" + id).addEventListener("click", () => {
+    month = new Date(month.getFullYear(), month.getMonth() + delta, 1);
+    renderMonth();
+  });
 function setKind(value) {
   kind = value;
   editing = null;
+  $("#entity-form").reset();
   for (const b of document.querySelectorAll("[data-kind]"))
     b.setAttribute("aria-selected", String(b.dataset.kind === kind));
   $("#editor-title").textContent =
@@ -155,30 +237,33 @@ function setKind(value) {
       : kind === "habit"
         ? "Новая привычка"
         : "Новая задача";
-  $("#entity-form").reset();
   $("#timing-fields").hidden = kind !== "block";
   $("#parent-field").hidden = kind === "block";
+  $("#task-schedule").hidden = kind !== "task";
+  $("#habit-explainer").hidden = kind !== "habit";
+  $("#no-parent").hidden = true;
   $("#form-error").textContent = "";
   $("#save-entity").textContent = "Создать";
-  renderParents();
+  $("#save-entity").disabled = false;
+  $("#parent").innerHTML =
+    '<option value="">На весь день · без блока</option>' +
+    state.blocks
+      .map((b) => `<option value="${esc(b.id)}">${esc(b.name)}</option>`)
+      .join("");
   $("#sphere-options").innerHTML = SPHERES.map(
-    (s, index) =>
-      `<label class="sphere-option"><input type="radio" name="sphereId" value="${s.id}" ${index === 0 ? "checked" : ""}><span style="background:${s.color}"></span><b>${s.name}</b></label>`,
+    (s, i) =>
+      `<label class="sphere-option"><input type="radio" name="sphereId" value="${s.id}" ${i === 0 ? "checked" : ""}><span style="background:${s.color}"></span><b>${s.name}</b></label>`,
   ).join("");
+  $("#name").placeholder =
+    kind === "block"
+      ? "Например, спортивный блок"
+      : kind === "habit"
+        ? "Например, отжимания"
+        : "Что нужно сделать?";
   renderLibrary();
 }
-function renderParents() {
-  const field = $("#parent");
-  field.innerHTML = state.blocks
-    .map((b) => `<option value="${esc(b.id)}">${esc(b.name)}</option>`)
-    .join("");
-  const current = activeBlock(state.blocks);
-  if (current) field.value = current.id;
-  $("#no-parent").hidden = kind === "block" || state.blocks.length > 0;
-  $("#save-entity").disabled = kind !== "block" && !state.blocks.length;
-}
 function renderLibrary() {
-  const items =
+  const list =
     kind === "block"
       ? state.blocks
       : state.items.filter((i) => i.type === kind);
@@ -188,73 +273,90 @@ function renderLibrary() {
       : kind === "habit"
         ? "Мои привычки"
         : "Мои задачи";
-  $("#entity-library").innerHTML = items.length
-    ? items
+  $("#entity-library").innerHTML = list.length
+    ? list
         .map(
           (i) =>
-            `<div class="library-row"><span class="sphere-dot" style="background:${sphereFor(i.sphereId).color}"></span><div><strong>${esc(i.name)}</strong><small>${kind === "block" ? `${i.start} — ${i.end}` : esc(state.blocks.find((b) => b.id === i.blockId)?.name || "")}</small></div><button type="button" data-edit="${esc(i.id)}" aria-label="Изменить ${esc(i.name)}">Изменить</button><button type="button" class="delete" data-delete="${esc(i.id)}" aria-label="Удалить ${esc(i.name)}">×</button></div>`,
+            `<div class="library-row"><span class="sphere-dot" style="background:${sphereFor(i.sphereId).color}"></span><div><strong>${esc(i.name)}</strong><small>${kind === "block" ? `${i.start} — ${i.end}` : esc(state.blocks.find((b) => b.id === i.blockId)?.name || "На весь день")}${i.date ? " · " + i.date : ""}${i.weekly ? " · еженедельно" : ""}</small></div><button type="button" data-edit="${esc(i.id)}" aria-label="Изменить ${esc(i.name)}">Изменить</button><button type="button" data-delete="${esc(i.id)}" class="delete" aria-label="Удалить ${esc(i.name)}">×</button></div>`,
         )
         .join("")
     : '<p class="empty-line">Здесь пока ничего нет.</p>';
 }
-$("#settings").addEventListener("click", () => {
-  if (!state) {
-    notice("Дождитесь загрузки расписания.", true);
-    return;
-  }
-  setKind("block");
+function openEditor(type = "block", date = "") {
+  if (!state) return notice("Дождись загрузки данных.", true);
+  setKind(type);
+  if (date) $("#task-date").value = date;
   $("#settings-dialog").showModal();
-});
-document
-  .querySelectorAll("[data-kind]")
-  .forEach((b) => b.addEventListener("click", () => setKind(b.dataset.kind)));
+}
+$("#settings").addEventListener("click", () => openEditor());
+$(".add-block").addEventListener("click", () => openEditor());
+for (const b of document.querySelectorAll("[data-add]")) {
+  b.setAttribute(
+    "aria-label",
+    b.dataset.add === "task"
+      ? "Добавить задачу на день"
+      : "Добавить привычку на день",
+  );
+  b.addEventListener("click", () => openEditor(b.dataset.add));
+}
+$("#add-dated-task").addEventListener("click", () =>
+  openEditor("task", selectedDate),
+);
+for (const b of document.querySelectorAll("[data-kind]"))
+  b.addEventListener("click", () => setKind(b.dataset.kind));
 $("#cancel-edit").addEventListener("click", () => setKind(kind));
 $("#entity-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   if (busy) return;
-  const data = new FormData(e.currentTarget);
-  const next = structuredClone(state);
-  const entry = {
-    id: editing || crypto.randomUUID(),
-    name: String(data.get("name")).trim(),
-    sphereId: String(data.get("sphereId")),
-  };
+  const d = new FormData(e.currentTarget),
+    entry = {
+      id: editing || crypto.randomUUID(),
+      name: String(d.get("name")).trim(),
+      sphereId: String(d.get("sphereId")),
+    };
   let error = "";
   if (kind === "block") {
-    entry.start = String(data.get("start"));
-    entry.end = String(data.get("end"));
+    entry.start = d.get("start");
+    entry.end = d.get("end");
     error = validateBlock(entry, state.blocks);
   } else {
     entry.type = kind;
-    entry.blockId = String(data.get("parent"));
-    if (!state.blocks.some((b) => b.id === entry.blockId))
-      error = "Сначала создайте блок.";
-    if (!entry.name) error = "Введите название.";
+    entry.blockId = d.get("parent") || "";
+    if (kind === "task") {
+      entry.date = d.get("date") || "";
+      entry.time = d.get("time") || "";
+      entry.weekly = d.get("weekly") === "on";
+      if (entry.weekly && !entry.date)
+        error = "Выбери дату первого повторения.";
+    }
+    if (!entry.name) error = "Введи название.";
   }
   if (error) {
     $("#form-error").textContent = error;
     return;
   }
-  const list = kind === "block" ? next.blocks : next.items;
-  const index = list.findIndex((i) => i.id === entry.id);
+  const next = structuredClone(state),
+    list = kind === "block" ? next.blocks : next.items,
+    index = list.findIndex((i) => i.id === entry.id);
   if (index < 0) list.push(entry);
   else list[index] = entry;
+  await saveEditor(next);
+});
+async function saveEditor(next) {
   busy = true;
   $("#save-entity").disabled = true;
-  $("#form-error").textContent = "";
   try {
     state = await store.save(next);
     setKind(kind);
-    render();
     notice("Сохранено");
-  } catch (err) {
-    $("#form-error").textContent = err.message;
+  } catch (e) {
+    $("#form-error").textContent = e.message;
   } finally {
     busy = false;
     $("#save-entity").disabled = false;
     render();
   }
-});
+}
 $("#entity-library").addEventListener("click", async (e) => {
   const edit = e.target.dataset.edit,
     remove = e.target.dataset.delete;
@@ -270,7 +372,14 @@ $("#entity-library").addEventListener("click", async (e) => {
     if (kind === "block") {
       $("#start").value = entry.start;
       $("#end").value = entry.end;
-    } else $("#parent").value = entry.blockId;
+    } else {
+      $("#parent").value = entry.blockId;
+      if (kind === "task") {
+        $("#task-date").value = entry.date || "";
+        $("#task-time").value = entry.time || "";
+        $("#task-weekly").checked = !!entry.weekly;
+      }
+    }
     $("#save-entity").textContent = "Сохранить";
     $("#name").focus();
     return;
@@ -278,33 +387,22 @@ $("#entity-library").addEventListener("click", async (e) => {
   if (
     !confirm(
       kind === "block"
-        ? "Удалить блок вместе с его привычками и задачами?"
-        : "Удалить эту запись?",
+        ? "Удалить блок и его привычки и задачи?"
+        : "Удалить запись?",
     )
   )
     return;
-  const next = structuredClone(state);
-  const removedIds =
-    kind === "block"
-      ? next.items.filter((i) => i.blockId === remove).map((i) => i.id)
-      : [remove];
-  if (kind === "block") {
+  const next = structuredClone(state),
+    ids =
+      kind === "block"
+        ? next.items.filter((i) => i.blockId === remove).map((i) => i.id)
+        : [remove];
+  next.items = next.items.filter((i) => !ids.includes(i.id));
+  if (kind === "block")
     next.blocks = next.blocks.filter((b) => b.id !== remove);
-    next.items = next.items.filter((i) => i.blockId !== remove);
-  } else next.items = next.items.filter((i) => i.id !== remove);
   for (const key of Object.keys(next.done))
-    if (removedIds.some((id) => key.endsWith(":" + id))) delete next.done[key];
-  busy = true;
-  try {
-    state = await store.save(next);
-    setKind(kind);
-    render();
-  } catch (err) {
-    $("#form-error").textContent = err.message;
-  } finally {
-    busy = false;
-    render();
-  }
+    if (ids.some((id) => key.endsWith(":" + id))) delete next.done[key];
+  await saveEditor(next);
 });
 $("#retry").addEventListener("click", load);
 $("#block-link").addEventListener("click", async () => {
@@ -312,24 +410,18 @@ $("#block-link").addEventListener("click", async () => {
   url.searchParams.set("id", $("#block-link").dataset.blockId);
   try {
     await navigator.clipboard.writeText(url.href);
-    notice("Ссылка на этот блок скопирована");
+    notice("Ссылка скопирована");
   } catch {
-    prompt("Ссылка на этот блок", url.href);
+    prompt("Ссылка на блок", url.href);
   }
 });
 setInterval(() => {
-  if (!document.hidden) render();
+  if (!document.hidden && !busy) render();
 }, 15000);
-setInterval(async () => {
-  if (!document.hidden && !busy && !$("#settings-dialog").open) await load();
+setInterval(() => {
+  if (!document.hidden && !busy && !$("#settings-dialog").open) load();
 }, 45000);
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden && !busy && !$("#settings-dialog").open) load();
 });
 load();
-
-document
-  .querySelector(".add-block")
-  ?.addEventListener("click", () =>
-    document.querySelector("#settings").click(),
-  );
