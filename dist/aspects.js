@@ -58,14 +58,21 @@ function renderRhythm() {
   const root = $("#practice-progress");
   if (!state.practices.length) { root.innerHTML = '<p class="empty-line">Добавь занятие внутри сферы — оно появится на общей линии дня.</p>'; return; }
   root.innerHTML = `<div class="aspect-rhythm" aria-label="Дневной прогресс по четырём аспектам">${groups.map((ids, index) => {
-    const practices = state.practices.filter((practice) => ids.includes(practice.sphereId));
+    const practices = ids.flatMap((sphereId) => state.practices.filter((practice) => practice.sphereId === sphereId));
     const target = practices.reduce((sum, practice) => sum + practice.target, 0);
     const actual = practices.reduce((sum, practice) => sum + progressMinutes(state, practice.id), 0);
-    const segments = practices.length ? practices.map((practice) => {
-      const value = progressMinutes(state, practice.id), sphere = sphereFor(practice.sphereId), width = practice.target / target * 100, fill = Math.min(100, value / practice.target * 100);
-      return `<span class="rhythm-segment" style="width:${width}%;--segment-color:${sphere.color}" title="${esc(practice.name)}: ${value} / ${practice.target} мин"><i style="width:${fill}%"></i></span>`;
+    const segments = practices.length ? ids.map((sphereId) => {
+      const spherePractices = practices.filter((practice) => practice.sphereId === sphereId);
+      if (!spherePractices.length) return "";
+      const sphere = sphereFor(sphereId), sphereTarget = spherePractices.reduce((sum, practice) => sum + practice.target, 0);
+      return `<span class="rhythm-sphere-track" style="width:${sphereTarget / target * 100}%;--sphere-track-color:${sphere.color}" title="${esc(sphere.name)}">${spherePractices.map((practice) => { const value = progressMinutes(state, practice.id), fill = Math.min(100, value / practice.target * 100); return `<span class="rhythm-segment" style="width:${practice.target / sphereTarget * 100}%;--segment-color:${sphere.color}" title="${esc(practice.name)}: ${value} / ${practice.target} мин"><i style="width:${fill}%"></i></span>`; }).join("")}</span>`;
     }).join("") : '<span class="rhythm-empty"></span>';
-    const legend = practices.map((practice) => { const value = progressMinutes(state, practice.id), sphere = sphereFor(practice.sphereId); return `<a href="/sphere/?id=${practice.sphereId}" class="rhythm-label"><i style="background:${sphere.color}"></i><span>${esc(practice.name)}</span><b>${value}/${practice.target}</b></a>`; }).join("");
+    const legend = ids.map((sphereId) => {
+      const spherePractices = practices.filter((practice) => practice.sphereId === sphereId);
+      if (!spherePractices.length) return "";
+      const sphere = sphereFor(sphereId);
+      return `<div class="rhythm-sphere-list"><a class="rhythm-sphere-name" href="/sphere/?id=${sphereId}"><i style="background:${sphere.color}"></i>${esc(sphere.name)} ↗</a>${spherePractices.map((practice) => { const value = progressMinutes(state, practice.id); return `<a href="/sphere/?id=${sphereId}" class="rhythm-label"><span>${esc(practice.name)}</span><b>${value}/${practice.target}</b></a>`; }).join("")}</div>`;
+    }).join("");
     return `<section class="aspect-rhythm-group"><header><span>0${index + 1}</span><strong>${aspectNames[index]}</strong><b>${actual}/${target || 0} мин</b></header><div class="rhythm-hotbar">${segments}</div><div class="rhythm-legend">${legend || '<small>Нет занятий</small>'}</div></section>`;
   }).join("")}</div>`;
 }
