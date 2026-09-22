@@ -69,7 +69,7 @@ revoke all on public.dlife_code_spaces,public.dlife_code_members,public.dlife_co
 
 create or replace function public.dlife_join_code(p_code text,p_initial jsonb)
 returns jsonb language plpgsql security definer set search_path=public,extensions as $$
-declare uid uuid:=auth.uid(); normalized text; hash text; sid uuid; created boolean:=false; result jsonb;
+declare uid uuid:=auth.uid(); normalized text; hash text; sid uuid; created boolean:=false; imported boolean:=false; result jsonb; current_payload jsonb; current_revision bigint;
 begin
  if uid is null then raise exception 'unauthorized'; end if;
  normalized:=regexp_replace(upper(trim(p_code)),'[^A-Z0-9]','','g');
@@ -84,7 +84,31 @@ begin
  end if;
  insert into public.dlife_code_members(space_id,user_id) values(sid,uid)
  on conflict(user_id) do update set space_id=excluded.space_id,joined_at=now();
- select jsonb_build_object('payload',payload,'revision',revision,'created',created) into result from public.dlife_code_spaces where id=sid;
+ select payload,revision into current_payload,current_revision from public.dlife_code_spaces where id=sid for update;
+ if not created
+   and coalesce(current_payload->'blocks','[]'::jsonb)='[]'::jsonb
+   and coalesce(current_payload->'items','[]'::jsonb)='[]'::jsonb
+   and coalesce(current_payload->'logs','[]'::jsonb)='[]'::jsonb
+   and coalesce(current_payload->'practices','[]'::jsonb)='[]'::jsonb
+   and coalesce(current_payload->'done','{}'::jsonb)='{}'::jsonb
+   and coalesce(current_payload->'steps','{}'::jsonb)='{}'::jsonb
+   and coalesce(current_payload->'spherePlans','{}'::jsonb)='{}'::jsonb
+   and (
+     coalesce(p_initial->'blocks','[]'::jsonb)<>'[]'::jsonb or
+     coalesce(p_initial->'items','[]'::jsonb)<>'[]'::jsonb or
+     coalesce(p_initial->'logs','[]'::jsonb)<>'[]'::jsonb or
+     coalesce(p_initial->'practices','[]'::jsonb)<>'[]'::jsonb or
+     coalesce(p_initial->'done','{}'::jsonb)<>'{}'::jsonb or
+     coalesce(p_initial->'steps','{}'::jsonb)<>'{}'::jsonb or
+     coalesce(p_initial->'spherePlans','{}'::jsonb)<>'{}'::jsonb
+   ) then
+   insert into public.dlife_code_backups(space_id,revision,payload) values(sid,current_revision+1,p_initial);
+   update public.dlife_code_spaces set payload=p_initial,revision=current_revision+1,updated_at=now() where id=sid;
+   current_payload:=p_initial;
+   current_revision:=current_revision+1;
+   imported:=true;
+ end if;
+ result:=jsonb_build_object('payload',current_payload,'revision',current_revision,'created',created,'imported',imported);
  return result;
 end $$;
 

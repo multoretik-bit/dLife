@@ -1,6 +1,6 @@
 import {ScheduleStore} from './store.js';
 import {cloudClient,cloudConfig,configureCloud,cloudEnabled,cloudUser,joinSyncCode,codeSyncEnabled,savedSyncCode,disableCodeSync} from './cloud.js';
-import {dateKey,emptyState} from './schedule.js';
+import {dateKey,emptyState,validateState} from './schedule.js';
 import {coinTotal,normalize} from './development.js';
 
 const $ = s => document.querySelector(s), store = new ScheduleStore();
@@ -15,10 +15,13 @@ async function connectCode(code){
   busy=true;
   $('#sync-code-status').textContent='Подключаем защищённое пространство…';
   try{
-    const initial=state||normalize(await new ScheduleStore().load());
+    let local=null;
+    try{const raw=JSON.parse(localStorage.getItem('dlife-local-state-v1')||'null');if(validateState(raw?.state))local=normalize(raw.state);}catch{}
+    const weight=s=>(s?.blocks?.length||0)+(s?.items?.length||0)+(s?.logs?.length||0)+(s?.practices?.length||0)+Object.keys(s?.done||{}).length+Object.keys(s?.steps||{}).length+Object.keys(s?.spherePlans||{}).length;
+    const initial=local&&weight(local)>weight(state)?local:(state||local||emptyState());
     const result=await joinSyncCode(code,initial);
     $('#sync-code').value=String(code).toUpperCase();
-    $('#sync-code-status').textContent=result?.created?'Код создан. Сохрани его — синхронизация включена.':'Вход выполнен. Загружаем данные с другого устройства…';
+    $('#sync-code-status').textContent=result?.created?'Код создан. Сохрани его — синхронизация включена.':result?.imported?'Локальные данные перенесены в облако. Загружаем их…':'Вход выполнен. Загружаем данные с другого устройства…';
     setTimeout(()=>location.reload(),700);
   }catch(error){$('#sync-code-status').textContent=error.message;}
   finally{busy=false;}

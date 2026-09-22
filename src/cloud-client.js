@@ -1,18 +1,22 @@
 import {createClient} from '@supabase/supabase-js';
 import {DMONEY_URL,DMONEY_ANON_KEY} from './dmoney-config.js';
 let client;
+let clientKey='';
 const defaultConfig=DMONEY_URL.startsWith('https://')&&DMONEY_ANON_KEY&&!DMONEY_ANON_KEY.startsWith('__')?{url:DMONEY_URL,key:DMONEY_ANON_KEY}:null;
 export function cloudConfig(){try{return JSON.parse(localStorage.getItem('dlife-cloud')||'null')||defaultConfig;}catch{return defaultConfig;}}
 export function cloudClient(){
   const c=cloudConfig();
   if(!c)return null;
+  const ref=new URL(c.url).hostname.split('.')[0];
+  const storageKey=`dlife-supabase-session-${ref}`;
   try {
-    if (!localStorage.getItem('dlife-supabase-session')) {
+    if (ref==='fzabpzvsgshbdoahcjnn'&&!localStorage.getItem(storageKey)) {
       const shared = localStorage.getItem('dhabits-dmoney-auth') || localStorage.getItem('sb-fzabpzvsgshbdoahcjnn-auth-token');
-      if (shared) localStorage.setItem('dlife-supabase-session', shared);
+      if (shared) localStorage.setItem(storageKey, shared);
     }
   } catch {}
-  client??=createClient(c.url,c.key,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'dlife-supabase-session'}});
+  const nextKey=c.url+'|'+c.key;
+  if(!client||clientKey!==nextKey){client=createClient(c.url,c.key,{auth:{persistSession:true,autoRefreshToken:true,storageKey}});clientKey=nextKey;}
   return client;
 }
 export function configureCloud(url,key){
@@ -30,10 +34,6 @@ export const savedSyncCode=()=>localStorage.getItem('dlife-sync-code')||'';
 export async function cloudUser(){
   const c=cloudClient();
   if(!c)return null;
-  try {
-    const {data:sessionData} = await c.auth.getSession();
-    if(sessionData?.session?.user) return sessionData.session.user;
-  } catch {}
   const {data,error}=await c.auth.getUser();
   if(error)return null;
   return data.user;
