@@ -3,6 +3,7 @@ import { ScheduleStore } from "./store.js";
 import { normalize, progressMinutes, escapeHTML as esc } from "./development.js";
 
 const groups = [["1", "2"], ["3", "4", "5"], ["6", "7"], ["8", "9", "10"]];
+const aspectNames = ["Физический", "Эмоциональный", "Духовный", "Ментальный"];
 const paths = [
   "M12 3a7 7 0 1 0 0 14 7 7 0 0 0 0-14ZM12 17v4M8 21h8",
   "M4 8v8M7 6v12M17 6v12M20 8v8M7 12h10",
@@ -17,7 +18,7 @@ const paths = [
 ];
 const $ = (selector) => document.querySelector(selector);
 const store = new ScheduleStore();
-let state = null, selected = 0, busy = false, stopAt = null, lastDay = dateKey();
+let state = null, selected = 0, busy = false, stopAt = null, lastDay = dateKey(), historyDate = dateKey(), historyOpen = false;
 
 function setupTimer() {
   $(".timer-controls").innerHTML = `<p id="timer-caption">Нажми play, когда начинаешь занятие.</p><div class="timer-icon-actions" aria-label="Управление таймером"><button id="timer-play" type="button" aria-label="Запустить таймер" title="Play">▶</button><button id="timer-pause" type="button" aria-label="Поставить таймер на паузу" title="Пауза">Ⅱ</button><button id="timer-stop" type="button" aria-label="Остановить таймер" title="Стоп">■</button><button id="manual-log" type="button" aria-label="Добавить время вручную" title="Добавить время">＋</button></div>`;
@@ -56,16 +57,44 @@ function timerElapsedMs(now = Date.now()) {
 function renderRhythm() {
   const root = $("#practice-progress");
   if (!state.practices.length) { root.innerHTML = '<p class="empty-line">Добавь занятие внутри сферы — оно появится на общей линии дня.</p>'; return; }
-  const total = state.practices.reduce((sum, practice) => sum + practice.target, 0);
-  const segments = state.practices.map((practice) => {
-    const actual = progressMinutes(state, practice.id), sphere = sphereFor(practice.sphereId), width = practice.target / total * 100, fill = Math.min(100, actual / practice.target * 100);
-    return `<span class="rhythm-segment" style="width:${width}%;--segment-color:${sphere.color}" title="${esc(practice.name)}: ${actual} / ${practice.target} мин"><i style="width:${fill}%"></i></span>`;
-  }).join("");
-  const legend = state.practices.map((practice) => {
-    const actual = progressMinutes(state, practice.id), sphere = sphereFor(practice.sphereId);
-    return `<a href="/sphere/?id=${practice.sphereId}" class="rhythm-label"><i style="background:${sphere.color}"></i><span>${esc(practice.name)}</span><b>${actual}/${practice.target}</b></a>`;
-  }).join("");
-  root.innerHTML = `<div class="rhythm-hotbar" role="progressbar" aria-label="Дневной прогресс">${segments}</div><div class="rhythm-legend">${legend}</div>`;
+  root.innerHTML = `<div class="aspect-rhythm" aria-label="Дневной прогресс по четырём аспектам">${groups.map((ids, index) => {
+    const practices = state.practices.filter((practice) => ids.includes(practice.sphereId));
+    const target = practices.reduce((sum, practice) => sum + practice.target, 0);
+    const actual = practices.reduce((sum, practice) => sum + progressMinutes(state, practice.id), 0);
+    const segments = practices.length ? practices.map((practice) => {
+      const value = progressMinutes(state, practice.id), sphere = sphereFor(practice.sphereId), width = practice.target / target * 100, fill = Math.min(100, value / practice.target * 100);
+      return `<span class="rhythm-segment" style="width:${width}%;--segment-color:${sphere.color}" title="${esc(practice.name)}: ${value} / ${practice.target} мин"><i style="width:${fill}%"></i></span>`;
+    }).join("") : '<span class="rhythm-empty"></span>';
+    const legend = practices.map((practice) => { const value = progressMinutes(state, practice.id), sphere = sphereFor(practice.sphereId); return `<a href="/sphere/?id=${practice.sphereId}" class="rhythm-label"><i style="background:${sphere.color}"></i><span>${esc(practice.name)}</span><b>${value}/${practice.target}</b></a>`; }).join("");
+    return `<section class="aspect-rhythm-group"><header><span>0${index + 1}</span><strong>${aspectNames[index]}</strong><b>${actual}/${target || 0} мин</b></header><div class="rhythm-hotbar">${segments}</div><div class="rhythm-legend">${legend || '<small>Нет занятий</small>'}</div></section>`;
+  }).join("")}</div>`;
+}
+
+function formatMinutes(value) {
+  const hours = Math.floor(value / 60), minutes = value % 60;
+  return hours ? `${hours} ч${minutes ? ` ${minutes} мин` : ""}` : `${minutes} мин`;
+}
+
+function groupedLogs(date) {
+  const map = new Map();
+  for (const log of state.logs.filter((entry) => entry.date === date)) {
+    const practice = state.practices.find((entry) => entry.id === log.practiceId);
+    const title = practice?.name || log.note?.trim() || sphereFor(log.sphereId).name;
+    const key = practice ? `practice:${practice.id}` : `note:${clean(title)}`;
+    const current = map.get(key) || { title, sphereId: log.sphereId, minutes: 0, count: 0 };
+    current.minutes += log.minutes; current.count += 1; map.set(key, current);
+  }
+  return [...map.values()].sort((a, b) => b.minutes - a.minutes);
+}
+
+function renderHistory() {
+  const groups = groupedLogs(historyDate), total = groups.reduce((sum, entry) => sum + entry.minutes, 0), today = dateKey();
+  $("#history-title").textContent = historyDate === today ? "Сегодня ты занимался" : new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", weekday: "long" }).format(new Date(historyDate + "T12:00:00"));
+  $("#useful-total").textContent = formatMinutes(total);
+  $("#time-history").innerHTML = groups.length ? groups.map((entry) => { const sphere = sphereFor(entry.sphereId); return `<div class="history-row"><i style="background:${sphere.color}"></i><div><strong>${esc(entry.title)}</strong><small>${sphere.name}${entry.count > 1 ? ` · ${entry.count} записи` : ""}</small></div><b>${formatMinutes(entry.minutes)}</b></div>`; }).join("") : '<p class="empty-line">В этот день пока нет записанных занятий.</p>';
+  const dates = [...new Set(state.logs.map((log) => log.date))].sort().reverse();
+  $("#history-days").hidden = !historyOpen;
+  $("#history-days").innerHTML = dates.length ? dates.map((date) => `<button type="button" data-history-date="${date}" class="${date === historyDate ? "is-selected" : ""}"><span>${date === today ? "Сегодня" : new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" }).format(new Date(date + "T12:00:00"))}</span><b>${formatMinutes(state.logs.filter((log) => log.date === date).reduce((sum, log) => sum + log.minutes, 0))}</b></button>`).join("") : '<p class="empty-line">История появится после первого занятия.</p>';
 }
 
 function render() {
@@ -79,8 +108,7 @@ function render() {
     }).join("");
   }
   renderRhythm();
-  const logs = state.logs.filter((log) => log.date === dateKey()).slice().reverse();
-  $("#time-history").innerHTML = logs.length ? logs.map((log) => { const sphere = sphereFor(log.sphereId), title = log.note || state.practices.find((p) => p.id === log.practiceId)?.name || sphere.name; return `<div class="history-row"><i style="background:${sphere.color}"></i><div><strong>${esc(title)}</strong><small>${sphere.name}</small></div><b>${log.minutes} мин</b></div>`; }).join("") : '<p class="empty-line">Пока нет записанных занятий.</p>';
+  renderHistory();
   tick();
 }
 
@@ -125,6 +153,8 @@ $("#session-form").addEventListener("submit", async (event) => {
 });
 
 for (const button of document.querySelectorAll("[data-aspect]")) button.addEventListener("click", () => { selected = Number(button.dataset.aspect); for (const tab of document.querySelectorAll("[data-aspect]")) tab.setAttribute("aria-selected", String(tab === button)); render(); });
+$("#history-toggle").addEventListener("click", () => { historyOpen = !historyOpen; $("#history-toggle").setAttribute("aria-expanded", String(historyOpen)); $("#history-toggle").textContent = historyOpen ? "Скрыть историю" : "Предыдущие дни"; renderHistory(); });
+$("#history-days").addEventListener("click", (event) => { const button = event.target.closest("[data-history-date]"); if (!button) return; historyDate = button.dataset.historyDate; renderHistory(); });
 window.addEventListener("resize", render);
 setInterval(tick, 1000);
 try { state = normalize(await store.load()); $("#aspect-status").textContent = "Нормы настраиваются внутри каждой сферы."; render(); } catch (error) { $("#aspect-status").textContent = error.message; }

@@ -75,8 +75,16 @@
         </div>
         <div class="sphere-grid" id="sphere-grid"></div>
         <section class="time-history">
-          <h2>Сегодня ты занимался</h2>
-          <div id="time-history"></div>
+          <div class="history-heading">
+            <div>
+              <span class="eyebrow">ВРЕМЯ С ПОЛЬЗОЙ</span>
+              <h2 id="history-title">Сегодня ты занимался</h2>
+              <strong id="useful-total" class="useful-total">0 минут</strong>
+            </div>
+            <button type="button" class="history-toggle" id="history-toggle" aria-expanded="false">Предыдущие дни</button>
+          </div>
+          <div id="history-days" class="history-days" hidden></div>
+          <div id="time-history" class="activity-summary"></div>
         </section>
         <p class="aspects-foot" id="aspect-status">Загружаем расписание…</p>
       </main>

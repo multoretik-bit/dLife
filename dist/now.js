@@ -21,6 +21,7 @@ let state = null,
   busy = false,
   kind = "block",
   editing = null,
+  draggedEntity = null,
   view = "now",
   selectedDate = dateKey(),
   month = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -284,10 +285,20 @@ function renderLibrary() {
     ? list
         .map(
           (i) =>
-            `<div class="library-row"><span class="sphere-dot" style="background:${sphereFor(i.sphereId).color}"></span><div><strong>${esc(i.name)}</strong><small>${kind === "block" ? `${i.start} — ${i.end}` : esc(state.blocks.find((b) => b.id === i.blockId)?.name || "На весь день")}${i.coins ? ` · +${i.coins} монет` : ""}${i.date ? " · " + i.date : ""}${i.weekly ? " · еженедельно" : ""}</small></div><button type="button" data-edit="${esc(i.id)}" aria-label="Изменить ${esc(i.name)}">Изменить</button><button type="button" data-delete="${esc(i.id)}" class="delete" aria-label="Удалить ${esc(i.name)}">×</button></div>`,
+            `<div class="library-row" draggable="true" data-entity-id="${esc(i.id)}"><button type="button" class="drag-grip" aria-label="Перетащить ${esc(i.name)}" title="Перетащить">⋮⋮</button><span class="sphere-dot" style="background:${sphereFor(i.sphereId).color}"></span><div><strong>${esc(i.name)}</strong><small>${kind === "block" ? `${i.start} — ${i.end}` : esc(state.blocks.find((b) => b.id === i.blockId)?.name || "На весь день")}${i.coins ? ` · +${i.coins} монет` : ""}${i.date ? " · " + i.date : ""}${i.weekly ? " · еженедельно" : ""}</small></div><div class="reorder-controls"><button type="button" data-move="up" data-move-id="${esc(i.id)}" aria-label="Поднять выше">↑</button><button type="button" data-move="down" data-move-id="${esc(i.id)}" aria-label="Опустить ниже">↓</button></div><button type="button" data-edit="${esc(i.id)}" aria-label="Изменить ${esc(i.name)}">Изменить</button><button type="button" data-delete="${esc(i.id)}" class="delete" aria-label="Удалить ${esc(i.name)}">×</button></div>`,
         )
         .join("")
     : '<p class="empty-line">Здесь пока ничего нет.</p>';
+}
+function reorderEntities(next, firstId, secondId) {
+  const list = kind === "block" ? next.blocks : next.items;
+  const visible = list.filter((entry) => kind === "block" || entry.type === kind);
+  const from = visible.findIndex((entry) => entry.id === firstId), to = visible.findIndex((entry) => entry.id === secondId);
+  if (from < 0 || to < 0 || from === to) return false;
+  [visible[from], visible[to]] = [visible[to], visible[from]];
+  if (kind === "block") next.blocks = visible;
+  else { let cursor = 0; next.items = list.map((entry) => entry.type === kind ? visible[cursor++] : entry); }
+  return true;
 }
 function openEditor(type = "block", date = "") {
   if (!state) return notice("Дождись загрузки данных.", true);
@@ -374,6 +385,12 @@ async function saveEditor(next) {
   }
 }
 $("#entity-library").addEventListener("click", async (e) => {
+  const move = e.target.dataset.move, moveId = e.target.dataset.moveId;
+  if (move && moveId && !busy) {
+    const visible = (kind === "block" ? state.blocks : state.items.filter((entry) => entry.type === kind)), index = visible.findIndex((entry) => entry.id === moveId), other = visible[index + (move === "up" ? -1 : 1)];
+    if (other) { const next = structuredClone(state); if (reorderEntities(next, moveId, other.id)) await saveEditor(next); }
+    return;
+  }
   const edit = e.target.dataset.edit,
     remove = e.target.dataset.delete;
   if ((!edit && !remove) || busy) return;
@@ -421,6 +438,10 @@ $("#entity-library").addEventListener("click", async (e) => {
     if (ids.some((id) => key.endsWith(":" + id))) { delete next.done[key]; if(next.rewards)delete next.rewards[key]; }
   await saveEditor(next);
 });
+$("#entity-library").addEventListener("dragstart", (event) => { const row = event.target.closest("[data-entity-id]"); if (!row) return; draggedEntity = row.dataset.entityId; row.classList.add("is-dragging"); event.dataTransfer.setData("text/plain", draggedEntity); event.dataTransfer.effectAllowed = "move"; });
+$("#entity-library").addEventListener("dragover", (event) => { const row = event.target.closest("[data-entity-id]"); if (!row || row.dataset.entityId === draggedEntity) return; event.preventDefault(); $("#entity-library").querySelectorAll(".drag-over").forEach((node) => node.classList.remove("drag-over")); row.classList.add("drag-over"); });
+$("#entity-library").addEventListener("drop", async (event) => { const row = event.target.closest("[data-entity-id]"); event.preventDefault(); if (!row || !draggedEntity || row.dataset.entityId === draggedEntity || busy) return; const next = structuredClone(state); if (reorderEntities(next, draggedEntity, row.dataset.entityId)) await saveEditor(next); });
+$("#entity-library").addEventListener("dragend", () => { draggedEntity = null; $("#entity-library").querySelectorAll(".is-dragging,.drag-over").forEach((node) => node.classList.remove("is-dragging", "drag-over")); });
 $("#retry").addEventListener("click", load);
 $("#block-link").addEventListener("click", async () => {
   const url = new URL("/embed/now/", location.origin);
