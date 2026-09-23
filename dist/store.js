@@ -120,3 +120,12 @@ export class ScheduleStore {
     return state;
   }
 }
+
+// Broadcast every loaded/saved state so shared UI (the header coin balance) stays current.
+const emitState = (state) => {
+  try { window.dispatchEvent(new CustomEvent("dlife:state", { detail: state })); } catch {}
+  return state;
+};
+const { load: baseLoad, save: baseSave } = ScheduleStore.prototype;
+ScheduleStore.prototype.load = async function () { return emitState(await baseLoad.call(this)); };
+ScheduleStore.prototype.save = async function (state) { return emitState(await baseSave.call(this, state)); };

@@ -3,16 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="theme-color" content="#174c6c" />
+    <meta name="theme-color" content="#f4f7fb" />
     <title>dLife — Мой профиль</title>
     <meta name="description" content="Личное пространство Дениса." />
-    <link rel="icon" type="image/png" href="/assets/app-icon.png" />
+    <link rel="icon" type="image/png" href="/assets/app-icon.png" /><link rel="apple-touch-icon" href="/assets/app-icon.png" />
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/now.css" />
     <link rel="stylesheet" href="/design.css" />
     <link rel="stylesheet" href="/features.css" />
     <script type="module" src="/app.js"></script>
-  <link rel="stylesheet" href="/extensions.css"/><script type="module" src="/account.js"></script></head>
+  <link rel="stylesheet" href="/extensions.css"/><link rel="stylesheet" href="/theme.css"/><script type="module" src="/account.js"></script></head>
   <body>
     <div class="workspace">
       <header class="header">
@@ -21,7 +21,7 @@
           <a class="nav-current" href="/" aria-current="page">Профиль</a
           ><a href="/now/">Задачи</a> <a href="/aspects/">Аспекты</a>
         </nav>
-        <button
+        <div class="header-actions"><div class="coin-pill" title="Мои монеты"><img src="/assets/coins.png" alt="" width="30" height="30"/><strong id="coin-balance" aria-label="Баланс монет">0</strong></div><button
           class="share"
           id="share"
           aria-label="Ссылка на блок"
@@ -38,7 +38,7 @@
               transform="translate(1 2) scale(.9)"
             />
           </svg>
-        </button>
+        </button></div>
       </header>
       <main class="profile-main">
         <div class="page-heading">

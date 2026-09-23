@@ -3,16 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="theme-color" content="#174c6c" />
+    <meta name="theme-color" content="#f4f7fb" />
     <title>dLife — Мой профиль</title>
     <meta name="description" content="Личное пространство Дениса." />
-    <link rel="icon" type="image/png" href="/assets/app-icon.png" />
+    <link rel="icon" type="image/png" href="/assets/app-icon.png" /><link rel="apple-touch-icon" href="/assets/app-icon.png" />
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/now.css" />
     <link rel="stylesheet" href="/design.css" />
     <link rel="stylesheet" href="/features.css" />
     <script type="module" src="/app.js"></script><script type="module" src="/home.js"></script>
-  <link rel="stylesheet" href="/extensions.css"/><script type="module" src="/account.js"></script></head>
+  <link rel="stylesheet" href="/extensions.css"/><link rel="stylesheet" href="/theme.css"/><script type="module" src="/account.js"></script></head>
   <body>
     <div class="workspace">
       <header class="header">
@@ -21,7 +21,7 @@
           <a class="nav-current" href="/" aria-current="page">Профиль</a
           ><a href="/now/">Задачи</a> <a href="/aspects/">Аспекты</a>
         </nav>
-        <button
+        <div class="header-actions"><div class="coin-pill" title="Мои монеты"><img src="/assets/coins.png" alt="" width="30" height="30"/><strong id="coin-balance" aria-label="Баланс монет">0</strong></div><button
           class="share"
           id="share"
           aria-label="Ссылка на блок"
@@ -38,7 +38,7 @@
               transform="translate(1 2) scale(.9)"
             />
           </svg>
-        </button>
+        </button></div>
       </header>
       <main class="profile-main">
         <div class="page-heading">
@@ -85,7 +85,7 @@
             </svg>
           </button>
         </article>
-      <section class="home-stats"><article class="stat-card"><span>Мой капитал</span><strong id="capital-value">—</strong><p id="capital-status">Подключи аккаунт dMoney через Supabase</p><button class="quiet-button" id="capital-refresh">Обновить dMoney ↗</button></article><article class="stat-card"><span>Шаги сегодня</span><strong id="steps-value">0</strong><p>Ручной ввод · за сегодня</p><form id="steps-form"><input aria-label="Количество шагов" id="steps-input" type="number" min="0" max="200000" required placeholder="Например, 8000"/><button type="submit" class="quiet-button">Сохранить</button></form></article><article class="stat-card"><span>Время с пользой</span><strong id="useful-value">0 <small>мин</small></strong><p>Все занятия из таймера за сегодня</p><a href="/aspects/" class="quiet-button">Открыть таймер ↗</a></article></section><section class="account-actions"><span class="coin-balance"><img src="/assets/coins.png" alt="Монеты"/><strong id="coin-balance">0</strong></span><button class="quiet-button" id="open-cloud">Синхронизация</button><button class="quiet-button" id="export-data">Скачать резервную копию</button><span id="home-status" role="status"></span></section></main>
+      <section class="home-stats"><article class="stat-card"><span>Мой капитал</span><strong id="capital-value">—</strong><p id="capital-status">Подключи аккаунт dMoney через Supabase</p><button class="quiet-button" id="capital-refresh">Обновить dMoney ↗</button></article><article class="stat-card"><span>Шаги сегодня</span><strong id="steps-value">0</strong><p>Ручной ввод · за сегодня</p><form id="steps-form"><input aria-label="Количество шагов" id="steps-input" type="number" min="0" max="200000" required placeholder="Например, 8000"/><button type="submit" class="quiet-button">Сохранить</button></form></article><article class="stat-card"><span>Время с пользой</span><strong id="useful-value">0 <small>мин</small></strong><p>Все занятия из таймера за сегодня</p><a href="/aspects/" class="quiet-button">Открыть таймер ↗</a></article></section><section class="account-actions"><button class="quiet-button" id="open-cloud">Синхронизация</button><button class="quiet-button" id="export-data">Скачать резервную копию</button><span id="home-status" role="status"></span></section></main>
     </div>
     <dialog id="share-dialog">
       <form method="dialog">

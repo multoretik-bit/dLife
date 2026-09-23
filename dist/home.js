@@ -36,7 +36,7 @@ function render() {
   $('#steps-value').textContent = new Intl.NumberFormat('ru-RU').format(state.steps[dateKey()] || 0);
   $('#steps-input').value = state.steps[dateKey()] || '';
   $('#useful-value').textContent = state.logs.filter(l => l.date === dateKey()).reduce((n, l) => n + l.minutes, 0) + ' мин';
-  $('#coin-balance').textContent = coinTotal(state);
+  $('#coin-balance').textContent = new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(coinTotal(state));
 }
 
 try {
