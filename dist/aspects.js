@@ -19,6 +19,7 @@ const paths = [
 const $ = (selector) => document.querySelector(selector);
 const store = new ScheduleStore();
 let state = null, selected = 0, busy = false, stopAt = null, lastDay = dateKey(), historyDate = dateKey(), historyOpen = false;
+const openLogGroups = new Set();
 
 function setupTimer() {
   $(".timer-controls").innerHTML = `<p id="timer-caption">Нажми play, когда начинаешь занятие.</p><div class="timer-icon-actions" aria-label="Управление таймером"><button id="timer-play" type="button" aria-label="Запустить таймер" title="Play">▶</button><button id="timer-pause" type="button" aria-label="Поставить таймер на паузу" title="Пауза">Ⅱ</button><button id="timer-stop" type="button" aria-label="Остановить таймер" title="Стоп">■</button><button id="manual-log" type="button" aria-label="Добавить время вручную" title="Добавить время">＋</button></div>`;
@@ -88,8 +89,8 @@ function groupedLogs(date) {
     const practice = state.practices.find((entry) => entry.id === log.practiceId);
     const title = practice?.name || log.note?.trim() || sphereFor(log.sphereId).name;
     const key = practice ? `practice:${practice.id}` : `note:${clean(title)}`;
-    const current = map.get(key) || { title, sphereId: log.sphereId, minutes: 0, count: 0 };
-    current.minutes += log.minutes; current.count += 1; map.set(key, current);
+    const current = map.get(key) || { title, sphereId: log.sphereId, minutes: 0, count: 0, logs: [] };
+    current.minutes += log.minutes; current.count += 1; current.logs.push(log); map.set(key, current);
   }
   return [...map.values()].sort((a, b) => b.minutes - a.minutes);
 }
@@ -98,7 +99,11 @@ function renderHistory() {
   const groups = groupedLogs(historyDate), total = groups.reduce((sum, entry) => sum + entry.minutes, 0), today = dateKey();
   $("#history-title").textContent = historyDate === today ? "Сегодня ты занимался" : new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", weekday: "long" }).format(new Date(historyDate + "T12:00:00"));
   $("#useful-total").textContent = formatMinutes(total);
-  $("#time-history").innerHTML = groups.length ? groups.map((entry) => { const sphere = sphereFor(entry.sphereId); return `<div class="history-row"><i style="background:${sphere.color}"></i><div><strong>${esc(entry.title)}</strong><small>${sphere.name}${entry.count > 1 ? ` · ${entry.count} записи` : ""}</small></div><b>${formatMinutes(entry.minutes)}</b></div>`; }).join("") : '<p class="empty-line">В этот день пока нет записанных занятий.</p>';
+  $("#time-history").innerHTML = groups.length ? groups.map((entry) => {
+    const sphere = sphereFor(entry.sphereId), groupId = entry.logs[0].id, expanded = openLogGroups.has(groupId);
+    const sessions = entry.logs.slice().reverse().map((log) => { const coins = Math.round(log.minutes * (log.coinRate || 0) * 100) / 100; return `<div class="history-session"><div><strong>${esc(log.note || entry.title)}</strong><small>${formatMinutes(log.minutes)}${coins ? ` · +${coins} монет` : ""}</small></div><button type="button" data-delete-log="${esc(log.id)}" aria-label="Удалить запись ${esc(log.note || entry.title)}">Удалить</button></div>`; }).join("");
+    return `<section class="history-group"><button type="button" class="history-row history-summary" data-log-group="${esc(groupId)}" aria-expanded="${expanded}"><i style="background:${sphere.color}"></i><span><strong>${esc(entry.title)}</strong><small>${sphere.name}${entry.count > 1 ? ` · ${entry.count} записи` : ""}</small></span><b>${formatMinutes(entry.minutes)}</b><em aria-hidden="true">⌄</em></button><div class="history-sessions" ${expanded ? "" : "hidden"}>${sessions}</div></section>`;
+  }).join("") : '<p class="empty-line">В этот день пока нет записанных занятий.</p>';
   const dates = [...new Set(state.logs.map((log) => log.date))].sort().reverse();
   $("#history-days").hidden = !historyOpen;
   $("#history-days").innerHTML = dates.length ? dates.map((date) => `<button type="button" data-history-date="${date}" class="${date === historyDate ? "is-selected" : ""}"><span>${date === today ? "Сегодня" : new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short" }).format(new Date(date + "T12:00:00"))}</span><b>${formatMinutes(state.logs.filter((log) => log.date === date).reduce((sum, log) => sum + log.minutes, 0))}</b></button>`).join("") : '<p class="empty-line">История появится после первого занятия.</p>';
@@ -162,6 +167,26 @@ $("#session-form").addEventListener("submit", async (event) => {
 for (const button of document.querySelectorAll("[data-aspect]")) button.addEventListener("click", () => { selected = Number(button.dataset.aspect); for (const tab of document.querySelectorAll("[data-aspect]")) tab.setAttribute("aria-selected", String(tab === button)); render(); });
 $("#history-toggle").addEventListener("click", () => { historyOpen = !historyOpen; $("#history-toggle").setAttribute("aria-expanded", String(historyOpen)); $("#history-toggle").textContent = historyOpen ? "Скрыть историю" : "Предыдущие дни"; renderHistory(); });
 $("#history-days").addEventListener("click", (event) => { const button = event.target.closest("[data-history-date]"); if (!button) return; historyDate = button.dataset.historyDate; renderHistory(); });
+$("#time-history").addEventListener("click", async (event) => {
+  const remove = event.target.closest("[data-delete-log]");
+  if (remove) {
+    if (busy) return;
+    const log = state.logs.find((entry) => entry.id === remove.dataset.deleteLog);
+    if (!log) return;
+    const coins = Math.round(log.minutes * (log.coinRate || 0) * 100) / 100;
+    if (!confirm(`Удалить эту запись времени?${coins ? ` Баланс уменьшится на ${coins} монет.` : ""}`)) return;
+    const next = structuredClone(state);
+    next.logs = next.logs.filter((entry) => entry.id !== log.id);
+    openLogGroups.clear();
+    await commit(next);
+    return;
+  }
+  const summary = event.target.closest("[data-log-group]");
+  if (!summary) return;
+  const id = summary.dataset.logGroup;
+  if (openLogGroups.has(id)) openLogGroups.delete(id); else openLogGroups.add(id);
+  renderHistory();
+});
 window.addEventListener("resize", render);
 setInterval(tick, 1000);
 try { state = normalize(await store.load()); $("#aspect-status").textContent = "Нормы настраиваются внутри каждой сферы."; render(); } catch (error) { $("#aspect-status").textContent = error.message; }
