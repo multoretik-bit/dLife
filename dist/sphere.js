@@ -1,5 +1,6 @@
 import { SPHERES, sphereFor, dateKey } from "./schedule.js";
 import { ScheduleStore } from "./store.js";
+import { mountStudy } from "./study.js";
 import {
   normalize,
   progressMinutes,
@@ -205,4 +206,5 @@ if (!sphere) {
   } catch (e) {
     message(e.message);
   }
+  if(state) mountStudy({sphereId:id,getState:()=>state,save,getBackend:()=>store.backend});
 }

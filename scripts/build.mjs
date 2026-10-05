@@ -30,6 +30,8 @@ await cp(".openai/hosting.json", "dist/.openai/hosting.json");
 await cp("drizzle", "dist/.openai/drizzle", { recursive: true });
 await cp("src/worker.js", "dist/server/index.js");
 await cp("dist/schedule.js", "dist/server/schedule.js");
+await cp("dist/study-model.js", "dist/server/study-model.js");
+await cp("dist/library-catalog.js", "dist/server/library-catalog.js");
 await writeFile(
   "dist/server/api.js",
   (await readFile("src/api.js", "utf8")).replace(
