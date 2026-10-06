@@ -3,13 +3,15 @@ import assert from 'node:assert/strict';
 import { CATALOG } from '../dist/library-catalog.js';
 import { changeStudy, library, validateStudy, safeURL } from '../dist/study-model.js';
 import { validateState, emptyState } from '../dist/schedule.js';
-test('complete library import preserves 208 unique books and eleven categories',()=>{
- assert.equal(CATALOG.length,208);assert.equal(new Set(CATALOG.map(b=>b.title)).size,208);assert.equal(new Set(CATALOG.map(b=>b.category)).size,11);assert.equal(CATALOG.filter(b=>b.category==='История').length,11);
+test('library catalog keeps 208 imported books plus later additions in eleven categories',()=>{
+ assert.equal(CATALOG.length,210);assert.equal(new Set(CATALOG.map(b=>b.title)).size,210);assert.equal(new Set(CATALOG.map(b=>b.category)).size,11);assert.equal(CATALOG.filter(b=>b.category==='История').length,12);
+ assert.ok(CATALOG.some(b=>b.title==='Библия'&&b.category==='Мировая классика'));assert.ok(CATALOG.some(b=>b.title.startsWith('SPQR')&&b.category==='История'));
+ assert.equal(CATALOG.find(b=>b.id==='library-208').title,'Осознание');
 });
 test('library updates preserve old state, persist removal and accept an empty library',()=>{
  const old={...emptyState(),spherePlans:{'10':{vision:'Учиться',deadline:'',tools:'',results:''}},study:undefined};
  const updated=changeStudy(old,s=>{s.books=s.books.filter(b=>b.id!=='library-1');s.books[0].status='reading';});
- assert.equal(library(old).length,208);assert.equal(library(updated).length,207);assert.equal(updated.spherePlans['10'].vision,'Учиться');assert.ok(validateState(updated));
+ assert.equal(library(old).length,210);assert.equal(library(updated).length,209);assert.equal(updated.spherePlans['10'].vision,'Учиться');assert.ok(validateState(updated));
  assert.equal(library(changeStudy(updated,s=>s.books=[])).length,0);
 });
 test('new state rejects invalid books, unsafe links and malformed progress',()=>{
@@ -32,4 +34,13 @@ test('books keep an optional https link to their Notion summary',()=>{
  const state=changeStudy(emptyState(),s=>{s.books[0].notion='https://app.notion.com/p/0123456789abcdef0123456789abcdef';s.books[1].notion='';});
  assert.ok(validateState(state));
  state.study.books[0].notion='javascript:alert(1)';assert.equal(validateState(state),false);
+});
+test('books saved before the catalog grew get the new books once, and a later removal sticks',()=>{
+ const saved={...emptyState(),study:{books:CATALOG.filter(b=>!b.id.startsWith('library-bible')&&b.id!=='library-spqr').map(b=>b.id==='library-1'?{...b,status:'read'}:b)}};
+ assert.ok(validateState(saved));
+ assert.equal(library(saved).length,210);
+ assert.equal(library(saved).find(b=>b.id==='library-1').status,'read');
+ const next=changeStudy(saved,s=>{s.books=s.books.filter(b=>b.id!=='library-bible');});
+ assert.equal(next.study.catalogVersion,2);assert.ok(validateState(next));
+ assert.equal(library(next).length,209);assert.ok(!library(next).some(b=>b.id==='library-bible'));
 });

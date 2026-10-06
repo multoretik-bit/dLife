@@ -209,4 +209,24 @@ Unfu*k Yourself. Парься меньше, живи больше|Гэри Дж�
 Внутренняя работа|Мэтью Микелетти и Эшли Коттрелл
 Осознание|Энтони де Мелло`
 };
-export const CATALOG = Object.entries(groups).flatMap(([category, lines]) => lines.split('\n').map(line => {const [title,author,year='']=line.split('|');return {title,author,year,category};})).map((b,i)=>({...b,id:`library-${i+1}`,status:'planned',notes:''}));
+const BASE = Object.entries(groups).flatMap(([category, lines]) => lines.split('\n').map(line => {const [title,author,year='']=line.split('|');return {title,author,year,category};})).map((b,i)=>({...b,id:`library-${i+1}`,status:'planned',notes:''}));
+
+// Книги, добавленные после первого импорта. У них постоянные id, чтобы не сдвигать номера исходного каталога.
+export const ADDITIONS = [
+  {id:'library-bible',title:'Библия',author:'',year:'',category:'Мировая классика',status:'planned',notes:''},
+  {id:'library-spqr',title:'SPQR. История Древнего Рима',author:'Мэри Бирд',year:'2015',category:'История',status:'planned',notes:''},
+];
+export const CATALOG_VERSION = 2;
+
+/** Добавляет недостающие книги из ADDITIONS, каждую — в конец своей категории. */
+export function withAdditions(books) {
+  const result = [...books];
+  for (const book of ADDITIONS) {
+    if (result.some(b => b.id === book.id)) continue;
+    const last = result.findLastIndex(b => b.category === book.category);
+    result.splice(last < 0 ? result.length : last + 1, 0, {...book});
+  }
+  return result;
+}
+
+export const CATALOG = withAdditions(BASE);
