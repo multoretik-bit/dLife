@@ -48,7 +48,30 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
     ({ library: renderLibrary, english: renderEnglish, history: renderHistory, resources: renderResources })[view]();
   }
 
-  /* ---------- Библиотека: «Читаю сейчас» → «Осталось прочитать» ---------- */
+  /* ---------- Библиотека: «Читаю сейчас» → «Осталось прочитать» ----------
+     Если на сервере подключён Notion, книги и статусы берутся оттуда (только чтение),
+     иначе — из локального каталога dLife. */
+  const notion = { state: 'loading', books: [], title: '', url: '', fetchedAt: null, error: '' };
+  const live = () => notion.state === 'ok';
+  const allBooks = () => (live() ? notion.books : library(getState()));
+  const bookCategories = (books) => (live() ? [...new Set(books.map((b) => b.category).filter(Boolean))] : categories(books));
+
+  async function syncNotion() {
+    if (!study) return;
+    try {
+      const response = await fetch('/api/notion-library', { cache: 'no-store' });
+      const data = response.headers.get('content-type')?.includes('json') ? await response.json() : { connected: false };
+      if (!data.connected) Object.assign(notion, { state: 'off' });
+      else if (data.error) Object.assign(notion, { state: notion.books.length ? 'ok' : 'error', error: data.error });
+      else Object.assign(notion, { state: 'ok', books: data.books, title: data.title, url: data.url, fetchedAt: new Date(data.fetchedAt), error: '' });
+    } catch {
+      if (notion.state === 'loading') notion.state = 'off';
+    }
+    if (view !== 'library') return;
+    if (shelf === 'queue' && body.querySelector('#book-search') === document.activeElement) drawBooks();
+    else if (!linking) renderLibrary();
+  }
+
   function renderLibrary() {
     if (shelf === 'queue') renderQueue(); else renderReading();
   }
@@ -59,7 +82,16 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
       <span>Прочитано <b>${read}</b> из ${books.length}</span><i><em style="width:${pct}%"></em></i></div>`;
   }
 
+  function syncBadge() {
+    if (notion.state === 'loading') return '<p class="lib-sync">Подключаюсь к Notion…</p>';
+    if (notion.state === 'error') return `<p class="lib-sync is-error">Notion: ${esc(notion.error)} Показан локальный список.</p>`;
+    if (!live()) return '';
+    const time = notion.fetchedAt.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    return `<p class="lib-sync"><span class="lib-live"></span>Синхронизировано с Notion в ${time}${notion.error ? ' · последнее обновление не удалось' : ''} <button class="lib-refresh" data-action="sync" aria-label="Обновить из Notion">↻</button></p>`;
+  }
+
   function notionButton(b) {
+    if (live()) return `<a class="lib-notion" ${external(b.url)}><span>N</span>Открыть конспект${ARROW}</a>`;
     if (linking === b.id) return `<form class="lib-link-form" data-link-form="${esc(b.id)}">
         <label class="sp-sr" for="link-${esc(b.id)}">Ссылка на конспект в Notion</label>
         <input id="link-${esc(b.id)}" name="url" type="url" value="${esc(b.notion || '')}" placeholder="Ссылка на страницу книги в Notion" maxlength="2000">
@@ -71,22 +103,24 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
   }
 
   function renderReading() {
-    const books = library(getState()), cats = categories(books);
+    const books = allBooks(), cats = bookCategories(books);
     const reading = books.filter((b) => b.status === 'reading'), left = books.filter((b) => b.status === 'planned').length;
     body.innerHTML = `
+      ${syncBadge()}
       <div class="lib-head"><h3>Читаю сейчас${reading.length ? ` <span>${reading.length}</span>` : ''}</h3>${progressPill(books)}</div>
       <div class="lib-reading">${reading.map((b) => `
         <article class="lib-now" data-book="${esc(b.id)}" style="--tone:${tone(cats, b.category)}">
-          <span class="study-category">${esc(b.category)}</span>
+          ${b.category ? `<span class="study-category">${esc(b.category)}</span>` : ''}
           <h4>${esc(b.title)}</h4>
           <p>${esc(b.author)}${b.year ? ' · ' + esc(b.year) : ''}</p>
           ${notionButton(b)}
-          <div class="lib-now-actions">
+          ${live() ? '' : `<div class="lib-now-actions">
             <button class="lib-done" data-mark-read="${esc(b.id)}">${CHECK}Прочитал</button>
             <button class="sp-ghost" data-set-status="${esc(b.id)}" data-value="planned">Отложить</button>
-          </div>
-        </article>`).join('') || `<div class="lib-empty"><strong>Сейчас ничего не читаешь</strong><p>Выбери следующую книгу из списка «Осталось прочитать».</p></div>`}
+          </div>`}
+        </article>`).join('') || `<div class="lib-empty"><strong>Сейчас ничего не читаешь</strong><p>${live() ? 'Поставь книге статус «Читаю» в Notion — она появится здесь.' : 'Выбери следующую книгу из списка «Осталось прочитать».'}</p></div>`}
       </div>
+      ${live() && reading.length ? '<p class="lib-hint">Отметь книгу прочитанной в Notion — здесь она обновится сама.</p>' : ''}
       <button class="lib-next" data-shelf="queue"><span><small>Дальше по списку</small>Осталось прочитать</span><b>${left}</b>${ARROW}</button>
       <div class="lib-shelf"></div>`;
     drawShelf();
@@ -94,29 +128,34 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
   }
 
   function renderQueue() {
-    const books = library(getState()), cats = categories(books), left = books.filter((b) => b.status === 'planned').length;
+    const books = allBooks(), cats = bookCategories(books), left = books.filter((b) => b.status === 'planned').length;
+    if (category && !cats.includes(category)) category = '';
     body.innerHTML = `
-      <div class="lib-head"><button class="lib-back" data-shelf="reading">← Читаю сейчас</button><h3>Осталось прочитать <span>${left}</span></h3><button class="sp-primary" data-action="new-book">＋ Добавить книгу</button></div>
-      <form id="book-form" class="study-form" hidden>
+      ${syncBadge()}
+      <div class="lib-head"><button class="lib-back" data-shelf="reading">← Читаю сейчас</button><h3>Осталось прочитать <span>${left}</span></h3>
+        ${live() ? `<a class="sp-primary" ${external(notion.url)}>＋ Добавить в Notion</a>` : '<button class="sp-primary" data-action="new-book">＋ Добавить книгу</button>'}</div>
+      ${live() ? '' : `<form id="book-form" class="study-form" hidden>
         <div><label for="book-title">Название</label><input id="book-title" name="title" maxlength="250" required></div>
         <div><label for="book-author">Автор</label><input id="book-author" name="author" maxlength="250"></div>
         <div><label for="book-category">Категория</label><input id="book-category" name="category" list="book-categories" value="Мои книги" maxlength="100" required>
           <datalist id="book-categories">${cats.map((c) => `<option value="${esc(c)}">`).join('')}</datalist></div>
         <div><label for="book-year">Год, если известен</label><input id="book-year" name="year" maxlength="60"></div>
         <div class="wide"><button class="sp-primary">Добавить в список</button> <button type="button" class="sp-ghost" data-action="cancel-book">Отмена</button></div>
-      </form>
+      </form>`}
       <div class="lib-toolbar">
         <div class="lib-search"><label for="book-search" class="sp-sr">Поиск книги или автора</label>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           <input id="book-search" type="search" value="${esc(query)}" placeholder="Найти книгу или автора"></div>
-        <div class="lib-cat"><label for="category-filter" class="sp-sr">Категория</label>
-          <select id="category-filter"><option value="">Все категории</option>${cats.map((c) => `<option ${category === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
+        ${cats.length > 1 ? `<div class="lib-cat"><label for="category-filter" class="sp-sr">Категория</label>
+          <select id="category-filter"><option value="">Все категории</option>${cats.map((c) => `<option ${category === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>` : ''}
       </div>
       <div class="study-books"></div><div class="study-pager"></div>`;
     drawBooks();
     body.querySelector('#book-search').oninput = (e) => { query = e.target.value; page = 0; drawBooks(); };
-    body.querySelector('#category-filter').onchange = (e) => { category = e.target.value; page = 0; drawBooks(); };
-    body.querySelector('#book-form').onsubmit = async (e) => {
+    const select = body.querySelector('#category-filter');
+    if (select) select.onchange = (e) => { category = e.target.value; page = 0; drawBooks(); };
+    const form = body.querySelector('#book-form');
+    if (form) form.onsubmit = async (e) => {
       e.preventDefault();
       const d = new FormData(e.target);
       const book = { id: crypto.randomUUID(), title: d.get('title').trim(), author: d.get('author').trim(), category: d.get('category').trim() || 'Мои книги', year: d.get('year').trim(), status: 'planned', notes: '' };
@@ -125,37 +164,39 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
   }
 
   function drawBooks() {
-    const books = library(getState()), cats = categories(books), q = query.toLocaleLowerCase('ru');
+    const books = allBooks(), cats = bookCategories(books), q = query.toLocaleLowerCase('ru');
     const list = books.filter((b) => b.status === 'planned' && (!category || b.category === category) && `${b.title} ${b.author}`.toLocaleLowerCase('ru').includes(q));
     const pages = Math.ceil(list.length / PAGE);
     page = Math.min(page, Math.max(0, pages - 1));
+    const actions = (b) => live()
+      ? `<a class="lib-start" ${external(b.url)}><span class="lib-n">N</span>Открыть в Notion</a>`
+      : `<button class="lib-start" data-start="${esc(b.id)}">${BOOK}Начать читать</button>
+         <button class="sp-ghost" data-mark-read="${esc(b.id)}" title="Уже прочитал">${CHECK}</button>
+         <button class="lib-icon" data-remove-book="${esc(b.id)}" aria-label="Удалить ${esc(b.title)}" title="Удалить из списка">${TRASH}</button>`;
     body.querySelector('.study-books').innerHTML = list.length
       ? list.slice(page * PAGE, (page + 1) * PAGE).map((b) => `
         <article class="study-book" data-book="${esc(b.id)}" style="--tone:${tone(cats, b.category)}">
-          <span class="study-category">${esc(b.category)}</span>
+          ${b.category ? `<span class="study-category">${esc(b.category)}</span>` : ''}
           <h3>${esc(b.title)}</h3>
           <p>${esc(b.author)}${b.year ? ' · ' + esc(b.year) : ''}</p>
-          <div class="study-book-actions">
-            <button class="lib-start" data-start="${esc(b.id)}">${BOOK}Начать читать</button>
-            <button class="sp-ghost" data-mark-read="${esc(b.id)}" title="Уже прочитал">${CHECK}</button>
-            <button class="lib-icon" data-remove-book="${esc(b.id)}" aria-label="Удалить ${esc(b.title)}" title="Удалить из списка">${TRASH}</button>
-          </div>
+          <div class="study-book-actions">${actions(b)}</div>
         </article>`).join('')
-      : `<div class="lib-empty"><strong>${books.some((b) => b.status === 'planned') ? 'Ничего не нашлось' : 'Список пуст 🎉'}</strong><p>${books.some((b) => b.status === 'planned') ? 'Измени поиск или категорию.' : 'Добавь новую книгу.'}</p></div>`;
+      : `<div class="lib-empty"><strong>${books.some((b) => b.status === 'planned') ? 'Ничего не нашлось' : 'Список пуст 🎉'}</strong><p>${books.some((b) => b.status === 'planned') ? 'Измени поиск или категорию.' : live() ? 'Добавь новые книги в Notion.' : 'Добавь новую книгу.'}</p></div>`;
     body.querySelector('.study-pager').innerHTML = pages > 1
       ? `<button data-page="-1" ${page === 0 ? 'disabled' : ''} aria-label="Назад">←</button><span>${page + 1} / ${pages}</span><button data-page="1" ${page + 1 >= pages ? 'disabled' : ''} aria-label="Далее">→</button>`
       : '';
   }
 
   function drawShelf() {
-    const done = library(getState()).filter((b) => b.status === 'read'), el = body.querySelector('.lib-shelf');
+    const done = allBooks().filter((b) => b.status === 'read'), el = body.querySelector('.lib-shelf');
+    const link = (b) => (live() ? b.url : b.notion);
     el.innerHTML = done.length
-      ? `<details ${shelfOpen ? 'open' : ''}><summary>${CHECK}Прочитанные книги <b>${done.length}</b></summary><ul>${done.map((b) => `<li><div><strong>${esc(b.title)}</strong><span>${esc(b.author)}</span></div>${b.notion ? `<a class="lib-mini-notion" ${external(b.notion)} title="Конспект в Notion">N</a>` : ''}<button class="sp-ghost" data-unread="${esc(b.id)}">Вернуть</button></li>`).join('')}</ul></details>`
+      ? `<details ${shelfOpen ? 'open' : ''}><summary>${CHECK}Прочитанные книги <b>${done.length}</b></summary><ul>${done.map((b) => `<li><div><strong>${esc(b.title)}</strong><span>${esc(b.author)}</span></div>${link(b) ? `<a class="lib-mini-notion" ${external(link(b))} title="Конспект в Notion">N</a>` : ''}${live() ? '' : `<button class="sp-ghost" data-unread="${esc(b.id)}">Вернуть</button>`}</li>`).join('')}</ul></details>`
       : '';
     el.querySelector('details')?.addEventListener('toggle', (e) => (shelfOpen = e.target.open));
   }
 
-  // Карточка уходит из списка с анимацией, затем сохраняется новый статус.
+  // Карточка уходит из списка с анимацией, затем сохраняется новый статус (только локальный режим).
   async function moveBook(id, card, value, flash, note) {
     const book = library(getState()).find((b) => b.id === id);
     if (!book) return;
@@ -233,6 +274,7 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
     else if (d.removeResource) { if (await commit((s) => (s.resources = s.resources.filter((x) => x.id !== d.removeResource)))) renderResources(); }
     else if (d.action === 'new-book') { body.querySelector('#book-form').hidden = false; body.querySelector('#book-title').focus(); }
     else if (d.action === 'cancel-book') body.querySelector('#book-form').hidden = true;
+    else if (d.action === 'sync') { b.classList.add('is-spinning'); await syncNotion(); }
   });
 
   root.addEventListener('submit', async (e) => {
@@ -245,4 +287,11 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
   });
 
   render();
+
+  if (study) {
+    syncNotion();
+    // Держим список свежим: раз в минуту, пока вкладка открыта, и сразу при возвращении на неё.
+    setInterval(() => document.visibilityState === 'visible' && syncNotion(), 60000);
+    document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && syncNotion());
+  }
 }
