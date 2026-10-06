@@ -6,6 +6,8 @@ const PALETTE = ['#e9a23b', '#4f7fe0', '#d9605a', '#8a63d2', '#2fa58c', '#c7843a
 const PAGE = 12;
 const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
 const TRASH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg>';
+const PEN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Zm9-13 4 4"/></svg>';
+const BOOK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5v-15ZM4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></svg>';
 const ARROW = '<svg class="tool-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>';
 const categories = (books) => [...new Set([...CATALOG, ...books].map((b) => b.category))];
 const tone = (cats, c) => PALETTE[Math.max(0, cats.indexOf(c)) % PALETTE.length];
@@ -16,7 +18,7 @@ const external = (href) => `href="${esc(href)}" target="_blank" rel="noopener no
 export function mountStudy({ root, sphereId, getState, save, getBackend }) {
   const study = sphereId === '10';
   const tabs = study ? [['library', 'Библиотека'], ['english', 'Английский'], ['history', 'История']] : [];
-  let view = study ? 'library' : 'resources', query = '', category = '', filter = '', page = 0, pending = false, shelfOpen = false;
+  let view = study ? 'library' : 'resources', shelf = 'reading', linking = null, query = '', category = '', page = 0, pending = false, shelfOpen = false;
 
   root.className = 'sp-card study-hub';
   root.innerHTML = `<div class="sp-card-head"><h2>Инструменты</h2>${tabs.length ? `<div class="study-tabs" role="tablist">${tabs.map(([id, label]) => `<button role="tab" data-tab="${id}">${label}</button>`).join('')}</div>` : ''}</div>
@@ -46,99 +48,132 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
     ({ library: renderLibrary, english: renderEnglish, history: renderHistory, resources: renderResources })[view]();
   }
 
-  /* ---------- Библиотека ---------- */
+  /* ---------- Библиотека: «Читаю сейчас» → «Осталось прочитать» ---------- */
   function renderLibrary() {
+    if (shelf === 'queue') renderQueue(); else renderReading();
+  }
+
+  function progressPill(books) {
+    const read = books.filter((b) => b.status === 'read').length, pct = books.length ? (read / books.length) * 100 : 0;
+    return `<div class="lib-progress" role="progressbar" aria-label="Прочитанные книги" aria-valuenow="${read}" aria-valuemin="0" aria-valuemax="${books.length || 1}">
+      <span>Прочитано <b>${read}</b> из ${books.length}</span><i><em style="width:${pct}%"></em></i></div>`;
+  }
+
+  function notionButton(b) {
+    if (linking === b.id) return `<form class="lib-link-form" data-link-form="${esc(b.id)}">
+        <label class="sp-sr" for="link-${esc(b.id)}">Ссылка на конспект в Notion</label>
+        <input id="link-${esc(b.id)}" name="url" type="url" value="${esc(b.notion || '')}" placeholder="Ссылка на страницу книги в Notion" maxlength="2000">
+        <div><button class="sp-primary">Сохранить</button><button type="button" class="sp-ghost" data-link-cancel>Отмена</button></div>
+      </form>`;
+    return b.notion
+      ? `<div class="lib-notion-row"><a class="lib-notion" ${external(b.notion)}><span>N</span>Открыть конспект${ARROW}</a><button class="lib-icon lib-edit" data-link="${esc(b.id)}" aria-label="Изменить ссылку на конспект" title="Изменить ссылку">${PEN}</button></div>`
+      : `<button class="lib-notion is-empty" data-link="${esc(b.id)}"><span>N</span>Привязать конспект</button>`;
+  }
+
+  function renderReading() {
     const books = library(getState()), cats = categories(books);
-    const read = books.filter((b) => b.status === 'read').length, reading = books.filter((b) => b.status === 'reading').length;
-    const pct = books.length ? Math.round((read / books.length) * 100) : 0, C = 2 * Math.PI * 44;
+    const reading = books.filter((b) => b.status === 'reading'), left = books.filter((b) => b.status === 'planned').length;
     body.innerHTML = `
-      <div class="lib-hero">
-        <div>
-          <span class="lib-eyebrow">Осталось прочитать</span>
-          <strong class="lib-count">${books.length - read}</strong>
-          <p>${reading ? `<span class="lib-dot"></span>${reading} читаю сейчас · ` : ''}${read} из ${books.length} уже прочитано</p>
-          <button class="sp-primary" data-action="new-book">＋ Добавить книгу</button>
-        </div>
-        <div class="lib-ring" role="progressbar" aria-label="Прочитанные книги" aria-valuenow="${read}" aria-valuemin="0" aria-valuemax="${books.length || 1}">
-          <svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="44" class="lib-ring-track"/><circle cx="50" cy="50" r="44" class="lib-ring-fill" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct / 100)}"/></svg>
-          <span><b>${pct}%</b>прочитано</span>
-        </div>
+      <div class="lib-head"><h3>Читаю сейчас${reading.length ? ` <span>${reading.length}</span>` : ''}</h3>${progressPill(books)}</div>
+      <div class="lib-reading">${reading.map((b) => `
+        <article class="lib-now" data-book="${esc(b.id)}" style="--tone:${tone(cats, b.category)}">
+          <span class="study-category">${esc(b.category)}</span>
+          <h4>${esc(b.title)}</h4>
+          <p>${esc(b.author)}${b.year ? ' · ' + esc(b.year) : ''}</p>
+          ${notionButton(b)}
+          <div class="lib-now-actions">
+            <button class="lib-done" data-mark-read="${esc(b.id)}">${CHECK}Прочитал</button>
+            <button class="sp-ghost" data-set-status="${esc(b.id)}" data-value="planned">Отложить</button>
+          </div>
+        </article>`).join('') || `<div class="lib-empty"><strong>Сейчас ничего не читаешь</strong><p>Выбери следующую книгу из списка «Осталось прочитать».</p></div>`}
       </div>
+      <button class="lib-next" data-shelf="queue"><span><small>Дальше по списку</small>Осталось прочитать</span><b>${left}</b>${ARROW}</button>
+      <div class="lib-shelf"></div>`;
+    drawShelf();
+    body.querySelector('.lib-link-form input')?.focus();
+  }
+
+  function renderQueue() {
+    const books = library(getState()), cats = categories(books), left = books.filter((b) => b.status === 'planned').length;
+    body.innerHTML = `
+      <div class="lib-head"><button class="lib-back" data-shelf="reading">← Читаю сейчас</button><h3>Осталось прочитать <span>${left}</span></h3><button class="sp-primary" data-action="new-book">＋ Добавить книгу</button></div>
       <form id="book-form" class="study-form" hidden>
         <div><label for="book-title">Название</label><input id="book-title" name="title" maxlength="250" required></div>
         <div><label for="book-author">Автор</label><input id="book-author" name="author" maxlength="250"></div>
         <div><label for="book-category">Категория</label><input id="book-category" name="category" list="book-categories" value="Мои книги" maxlength="100" required>
           <datalist id="book-categories">${cats.map((c) => `<option value="${esc(c)}">`).join('')}</datalist></div>
         <div><label for="book-year">Год, если известен</label><input id="book-year" name="year" maxlength="60"></div>
-        <div class="wide"><button class="sp-primary">Добавить в план</button> <button type="button" class="sp-ghost" data-action="cancel-book">Отмена</button></div>
+        <div class="wide"><button class="sp-primary">Добавить в список</button> <button type="button" class="sp-ghost" data-action="cancel-book">Отмена</button></div>
       </form>
       <div class="lib-toolbar">
         <div class="lib-search"><label for="book-search" class="sp-sr">Поиск книги или автора</label>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           <input id="book-search" type="search" value="${esc(query)}" placeholder="Найти книгу или автора"></div>
-        <div class="lib-chips" role="group" aria-label="Статус">${[['', 'Все'], ['reading', 'Читаю'], ['planned', 'Хочу прочитать']].map(([v, t]) => `<button type="button" class="lib-chip" data-filter="${v}">${t}</button>`).join('')}</div>
         <div class="lib-cat"><label for="category-filter" class="sp-sr">Категория</label>
           <select id="category-filter"><option value="">Все категории</option>${cats.map((c) => `<option ${category === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
       </div>
-      <div class="study-books"></div><div class="study-pager"></div><div class="lib-shelf"></div>`;
+      <div class="study-books"></div><div class="study-pager"></div>`;
     drawBooks();
-    drawShelf();
     body.querySelector('#book-search').oninput = (e) => { query = e.target.value; page = 0; drawBooks(); };
     body.querySelector('#category-filter').onchange = (e) => { category = e.target.value; page = 0; drawBooks(); };
     body.querySelector('#book-form').onsubmit = async (e) => {
       e.preventDefault();
       const d = new FormData(e.target);
       const book = { id: crypto.randomUUID(), title: d.get('title').trim(), author: d.get('author').trim(), category: d.get('category').trim() || 'Мои книги', year: d.get('year').trim(), status: 'planned', notes: '' };
-      if (book.title && await commit((s) => s.books.unshift(book))) { query = category = filter = ''; page = 0; renderLibrary(); }
+      if (book.title && await commit((s) => s.books.unshift(book))) { query = category = ''; page = 0; renderLibrary(); }
     };
   }
 
   function drawBooks() {
-    const books = library(getState()), cats = categories(books), q = query.toLocaleLowerCase('ru'), unread = books.some((b) => b.status !== 'read');
-    const list = books
-      .filter((b) => b.status !== 'read' && (!category || b.category === category) && (!filter || b.status === filter) && `${b.title} ${b.author}`.toLocaleLowerCase('ru').includes(q))
-      .sort((a, b) => (b.status === 'reading') - (a.status === 'reading'));
+    const books = library(getState()), cats = categories(books), q = query.toLocaleLowerCase('ru');
+    const list = books.filter((b) => b.status === 'planned' && (!category || b.category === category) && `${b.title} ${b.author}`.toLocaleLowerCase('ru').includes(q));
     const pages = Math.ceil(list.length / PAGE);
     page = Math.min(page, Math.max(0, pages - 1));
-    body.querySelectorAll('.lib-chip').forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.filter === filter)));
     body.querySelector('.study-books').innerHTML = list.length
       ? list.slice(page * PAGE, (page + 1) * PAGE).map((b) => `
-        <article class="study-book${b.status === 'reading' ? ' is-reading' : ''}" style="--tone:${tone(cats, b.category)}">
-          <div class="study-book-head"><span class="study-category">${esc(b.category)}</span>${b.status === 'reading' ? '<span class="lib-badge">Читаю</span>' : ''}</div>
+        <article class="study-book" data-book="${esc(b.id)}" style="--tone:${tone(cats, b.category)}">
+          <span class="study-category">${esc(b.category)}</span>
           <h3>${esc(b.title)}</h3>
           <p>${esc(b.author)}${b.year ? ' · ' + esc(b.year) : ''}</p>
           <div class="study-book-actions">
-            <button class="lib-done" data-mark-read="${esc(b.id)}">${CHECK}Прочитал</button>
-            <button class="sp-ghost" data-set-status="${esc(b.id)}" data-value="${b.status === 'reading' ? 'planned' : 'reading'}">${b.status === 'reading' ? 'Отложить' : 'Читаю'}</button>
+            <button class="lib-start" data-start="${esc(b.id)}">${BOOK}Начать читать</button>
+            <button class="sp-ghost" data-mark-read="${esc(b.id)}" title="Уже прочитал">${CHECK}</button>
             <button class="lib-icon" data-remove-book="${esc(b.id)}" aria-label="Удалить ${esc(b.title)}" title="Удалить из списка">${TRASH}</button>
           </div>
-          <details><summary>Мои заметки${b.notes ? ' · есть запись' : ''}</summary>
-            <textarea aria-label="Заметки: ${esc(b.title)}" rows="3" maxlength="5000">${esc(b.notes)}</textarea>
-            <button class="sp-ghost" data-save-note="${esc(b.id)}">Сохранить заметку</button></details>
         </article>`).join('')
-      : `<div class="lib-empty"><strong>${unread ? 'Ничего не нашлось' : 'Все книги прочитаны 🎉'}</strong><p>${unread ? 'Измени поиск или фильтры.' : 'Добавь новую книгу в план.'}</p></div>`;
+      : `<div class="lib-empty"><strong>${books.some((b) => b.status === 'planned') ? 'Ничего не нашлось' : 'Список пуст 🎉'}</strong><p>${books.some((b) => b.status === 'planned') ? 'Измени поиск или категорию.' : 'Добавь новую книгу.'}</p></div>`;
     body.querySelector('.study-pager').innerHTML = pages > 1
       ? `<button data-page="-1" ${page === 0 ? 'disabled' : ''} aria-label="Назад">←</button><span>${page + 1} / ${pages}</span><button data-page="1" ${page + 1 >= pages ? 'disabled' : ''} aria-label="Далее">→</button>`
       : '';
   }
 
   function drawShelf() {
-    const done = library(getState()).filter((b) => b.status === 'read'), shelf = body.querySelector('.lib-shelf');
-    shelf.innerHTML = done.length
-      ? `<details ${shelfOpen ? 'open' : ''}><summary>${CHECK}Прочитанные книги <b>${done.length}</b></summary><ul>${done.map((b) => `<li><div><strong>${esc(b.title)}</strong><span>${esc(b.author)}</span></div><button class="sp-ghost" data-unread="${esc(b.id)}">Вернуть</button></li>`).join('')}</ul></details>`
+    const done = library(getState()).filter((b) => b.status === 'read'), el = body.querySelector('.lib-shelf');
+    el.innerHTML = done.length
+      ? `<details ${shelfOpen ? 'open' : ''}><summary>${CHECK}Прочитанные книги <b>${done.length}</b></summary><ul>${done.map((b) => `<li><div><strong>${esc(b.title)}</strong><span>${esc(b.author)}</span></div>${b.notion ? `<a class="lib-mini-notion" ${external(b.notion)} title="Конспект в Notion">N</a>` : ''}<button class="sp-ghost" data-unread="${esc(b.id)}">Вернуть</button></li>`).join('')}</ul></details>`
       : '';
-    shelf.querySelector('details')?.addEventListener('toggle', (e) => (shelfOpen = e.target.open));
+    el.querySelector('details')?.addEventListener('toggle', (e) => (shelfOpen = e.target.open));
   }
 
-  async function markRead(id, card) {
+  // Карточка уходит из списка с анимацией, затем сохраняется новый статус.
+  async function moveBook(id, card, value, flash, note) {
     const book = library(getState()).find((b) => b.id === id);
     if (!book) return;
+    card.dataset.flash = flash;
     card.classList.add('is-closing');
     await new Promise((r) => setTimeout(r, reduced() ? 0 : 420));
-    if (await commit((s) => (s.books.find((b) => b.id === id).status = 'read'))) {
+    if (await commit((s) => (s.books.find((b) => b.id === id).status = value))) {
       renderLibrary();
-      status.innerHTML = `«${esc(book.title)}» — прочитана и убрана из списка. <button class="lib-undo" data-unread="${esc(id)}">Вернуть</button>`;
+      status.innerHTML = `«${esc(book.title)}» — ${note}. <button class="lib-undo" data-undo="${esc(id)}" data-prev="${book.status}">Вернуть</button>`;
     } else card.classList.remove('is-closing');
+  }
+
+  function cleanNotionURL(value) {
+    const url = safeURL(String(value).trim());
+    if (!url) return '';
+    const u = new URL(url);
+    u.searchParams.delete('source');
+    return u.href;
   }
 
   /* ---------- Английский и история ---------- */
@@ -182,19 +217,31 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
     if (!b || pending) return;
     const d = b.dataset;
     if (d.tab) { view = d.tab; status.textContent = ''; render(); }
+    else if (d.shelf) { shelf = d.shelf; linking = null; status.textContent = ''; renderLibrary(); root.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' }); }
     else if (d.page) { page += Number(d.page); drawBooks(); body.querySelector('.lib-toolbar').scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' }); }
-    else if (d.filter !== undefined) { filter = d.filter; page = 0; drawBooks(); }
-    else if (d.markRead) await markRead(d.markRead, b.closest('article'));
+    else if (d.markRead) await moveBook(d.markRead, b.closest('article'), 'read', '✓', 'прочитана');
+    else if (d.start) await moveBook(d.start, b.closest('article'), 'reading', '📖', 'теперь в «Читаю сейчас»');
     else if (d.setStatus) { if (await commit((s) => (s.books.find((x) => x.id === d.setStatus).status = d.value))) renderLibrary(); }
-    else if (d.unread) { if (await commit((s) => (s.books.find((x) => x.id === d.unread).status = 'planned'))) { renderLibrary(); status.textContent = 'Книга вернулась в список.'; } }
+    else if (d.undo) { if (await commit((s) => (s.books.find((x) => x.id === d.undo).status = d.prev))) { renderLibrary(); status.textContent = 'Вернул как было.'; } }
+    else if (d.unread) { if (await commit((s) => (s.books.find((x) => x.id === d.unread).status = 'planned'))) { renderLibrary(); status.textContent = 'Книга вернулась в «Осталось прочитать».'; } }
+    else if (d.link) { linking = d.link; renderLibrary(); }
+    else if (d.linkCancel !== undefined) { linking = null; renderLibrary(); }
     else if (d.removeBook) {
       const book = library(getState()).find((x) => x.id === d.removeBook);
       if (confirm(`Убрать «${book.title}» из списка?`) && await commit((s) => (s.books = s.books.filter((x) => x.id !== book.id)))) renderLibrary();
     }
-    else if (d.saveNote) { const notes = b.closest('article').querySelector('textarea').value; await commit((s) => (s.books.find((x) => x.id === d.saveNote).notes = notes)); }
     else if (d.removeResource) { if (await commit((s) => (s.resources = s.resources.filter((x) => x.id !== d.removeResource)))) renderResources(); }
     else if (d.action === 'new-book') { body.querySelector('#book-form').hidden = false; body.querySelector('#book-title').focus(); }
     else if (d.action === 'cancel-book') body.querySelector('#book-form').hidden = true;
+  });
+
+  root.addEventListener('submit', async (e) => {
+    const id = e.target.dataset.linkForm;
+    if (id === undefined) return;
+    e.preventDefault();
+    const raw = new FormData(e.target).get('url'), url = cleanNotionURL(raw);
+    if (raw.trim() && !url) { status.textContent = 'Вставь ссылку, которая начинается с https://'; return; }
+    if (await commit((s) => (s.books.find((x) => x.id === id).notion = url))) { linking = null; renderLibrary(); status.textContent = url ? 'Конспект привязан.' : 'Ссылка на конспект убрана.'; }
   });
 
   render();

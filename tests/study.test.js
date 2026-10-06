@@ -28,3 +28,8 @@ test('sphere plans accept yearly goals and reject malformed ones',()=>{
  assert.equal(validateState(withGoals([{id:'g1',text:'A',done:'yes'}])),false);
  assert.equal(validateState(withGoals([{id:'g1',text:'A',done:false},{id:'g1',text:'B',done:true}])),false);
 });
+test('books keep an optional https link to their Notion summary',()=>{
+ const state=changeStudy(emptyState(),s=>{s.books[0].notion='https://app.notion.com/p/0123456789abcdef0123456789abcdef';s.books[1].notion='';});
+ assert.ok(validateState(state));
+ state.study.books[0].notion='javascript:alert(1)';assert.equal(validateState(state),false);
+});
