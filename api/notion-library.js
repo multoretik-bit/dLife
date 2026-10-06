@@ -1,12 +1,13 @@
 // Живая библиотека из Notion: читает базу книг и отдаёт список с текущими статусами.
 // Переменные окружения Vercel:
 //   NOTION_TOKEN    — ключ внутренней интеграции Notion (только чтение), база должна быть ей открыта;
-//   NOTION_LIBRARY  — ссылка на базу книг (или на страницу, внутри которой она лежит), либо её ID.
+//   NOTION_LIBRARY  — необязательно: другая база книг (ссылка или ID). По умолчанию — «Библиотека» 📕 Дениса.
 // Необязательные NOTION_STATUS_PROPERTY / NOTION_AUTHOR_PROPERTY / NOTION_CATEGORY_PROPERTY задают колонки явно.
 
 const API = 'https://api.notion.com/v1/';
 const VERSION = '2022-06-28';
 const MAX_BOOKS = 2000;
+const DEFAULT_LIBRARY = 'https://app.notion.com/p/1da8171a481c805f85bbefdff2f5a443';
 
 const plain = (rich) => (Array.isArray(rich) ? rich : []).map((t) => t.plain_text ?? t.text?.content ?? '').join('').trim();
 
@@ -147,8 +148,8 @@ export async function loadLibrary(token, target) {
 export default async function handler(req, res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   if (req.method !== 'GET') return res.status(405).json({ message: 'Только чтение.' });
-  const { NOTION_TOKEN, NOTION_LIBRARY } = process.env;
-  if (!NOTION_TOKEN || !NOTION_LIBRARY) {
+  const { NOTION_TOKEN, NOTION_LIBRARY = DEFAULT_LIBRARY } = process.env;
+  if (!NOTION_TOKEN) {
     res.setHeader('Cache-Control', 'no-store');
     return res.status(200).json({ connected: false });
   }

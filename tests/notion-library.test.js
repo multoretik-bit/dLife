@@ -91,7 +91,7 @@ function response() {
 }
 
 test('handler reports a missing setup, hides the token and explains access errors', async () => {
-  delete process.env.NOTION_TOKEN; delete process.env.NOTION_LIBRARY;
+  delete process.env.NOTION_TOKEN; process.env.NOTION_LIBRARY = ID;
   let res = await handler({ method: 'GET' }, response());
   assert.deepEqual(res.body, { connected: false });
 

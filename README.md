@@ -17,7 +17,7 @@
 Подключение (Vercel → Settings → Environment Variables, затем Redeploy):
 
 - `NOTION_TOKEN` — секрет внутренней интеграции Notion (https://www.notion.so/profile/integrations, права только на чтение). В базе книг: ••• → Connections → добавить эту интеграцию.
-- `NOTION_LIBRARY` — ссылка на базу книг (или на страницу, где она лежит).
+- `NOTION_LIBRARY` — необязательно: по умолчанию используется база «Библиотека» 📕 (https://app.notion.com/p/1da8171a481c805f85bbefdff2f5a443).
 - Необязательно: `NOTION_STATUS_PROPERTY`, `NOTION_AUTHOR_PROPERTY`, `NOTION_CATEGORY_PROPERTY` — точные названия колонок, если автоопределение ошиблось.
 
 Адрес `/api/notion-library` открыт без входа и показывает только названия, авторов, категории, статусы и ссылки на страницы книг; содержимое конспектов не передаётся.
