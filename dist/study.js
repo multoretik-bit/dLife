@@ -59,7 +59,7 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
   async function syncNotion() {
     if (!study) return;
     try {
-      const response = await fetch('/api/notion-library', { cache: 'no-store' });
+      const response = await fetch('/api/notion-library/', { cache: 'no-store' });
       const data = response.headers.get('content-type')?.includes('json') ? await response.json() : { connected: false };
       if (!data.connected) Object.assign(notion, { state: 'off' });
       else if (data.error) Object.assign(notion, { state: notion.books.length ? 'ok' : 'error', error: data.error });
