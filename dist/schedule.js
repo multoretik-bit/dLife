@@ -186,7 +186,14 @@ function validateDevelopment(s) {
           !text(p.vision, 5000) ||
           !text(p.tools, 5000) ||
           !text(p.results, 5000) ||
-          (p.deadline !== "" && !validDate(p.deadline)),
+          (p.deadline !== "" && !validDate(p.deadline)) ||
+          (p.goals !== undefined &&
+            (!Array.isArray(p.goals) ||
+              p.goals.length > 100 ||
+              !unique(p.goals) ||
+              p.goals.some(
+                (g) => !g || !text(g.id, 80) || !g.id || !text(g.text, 300) || !g.text.trim() || typeof g.done !== "boolean",
+              ))),
       ))
   )
     return false;

@@ -175,8 +175,7 @@ main { padding-top: 28px; }
 .stat-card .quiet-button,
 .account-actions .quiet-button,
 .sync-code-actions .quiet-button,
-#cloud-dialog .quiet-button,
-.development-panel .section-title .quiet-button {
+#cloud-dialog .quiet-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -188,8 +187,7 @@ main { padding-top: 28px; }
 .stat-card .quiet-button:hover,
 .account-actions .quiet-button:hover,
 .sync-code-actions .quiet-button:hover,
-#cloud-dialog .quiet-button:hover,
-.development-panel .section-title .quiet-button:hover { background: #cfeafb; }
+#cloud-dialog .quiet-button:hover { background: #cfeafb; }
 
 input, select, textarea { font-family: inherit; }
 input:not([type="checkbox"]):not([type="radio"]),
@@ -329,31 +327,6 @@ textarea:focus {
 .history-days button { transition: border-color 0.2s, background 0.2s; }
 
 /* ---------- Сфера ---------- */
-.sphere-page-heading > span { border-radius: 10px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
-.sphere-page-heading h1 { font-weight: 800; }
-.development-panel {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-top: 4px solid var(--sphere-accent, var(--blue));
-  box-shadow: var(--shadow);
-}
-.practice-form { grid-template-columns: minmax(0, 1fr) 280px; gap: 14px 16px; }
-.practice-form > div:first-child { min-width: 0; }
-.practice-form label { white-space: nowrap; }
-.practice-rate-presets { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.practice-rate-chip {
-  min-width: 44px;
-  padding: 7px 12px;
-  border-radius: 999px;
-  border: 1px solid #f3d57a;
-  background: var(--gold-soft);
-  color: #7a5600;
-  font-size: 13px;
-  font-weight: 700;
-  transition: background 0.15s, transform 0.15s;
-}
-.practice-rate-chip:hover { background: #ffecad; transform: translateY(-1px); }
-.practice-form > div:last-child { grid-column: 1 / -1; }
 
 /* ---------- Диалоги ---------- */
 dialog {

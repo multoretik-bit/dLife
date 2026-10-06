@@ -11,206 +11,71 @@
     <link rel="stylesheet" href="/now.css" />
     <link rel="stylesheet" href="/design.css" />
     <link rel="stylesheet" href="/features.css" />
+    <link rel="stylesheet" href="/extensions.css" />
+    <link rel="stylesheet" href="/theme.css" />
+    <link rel="stylesheet" href="/sphere.css" />
     <script type="module" src="/app.js"></script>
+    <script type="module" src="/account.js"></script>
     <script type="module" src="/sphere.js"></script>
-  <link rel="stylesheet" href="/extensions.css"/><link rel="stylesheet" href="/theme.css"/><script type="module" src="/account.js"></script><link rel="stylesheet" href="/study.css"/></head>
+  </head>
   <body>
     <div class="workspace">
       <header class="header">
-        <a class="brand" href="/" aria-label="dLife — главная"><img src="/assets/app-icon.png" alt="" width="48" height="48"/><span>dLife</span></a>
+        <a class="brand" href="/" aria-label="dLife — главная"><img src="/assets/app-icon.png" alt="" width="48" height="48" /><span>dLife</span></a>
         <nav aria-label="Основная навигация">
-          <a href="/">Профиль</a><a href="/now/">Задачи</a>
-          <a class="nav-current" aria-current="page" href="/aspects/"
-            >Аспекты</a
-          >
+          <a href="/">Профиль</a><a href="/now/">Задачи</a><a class="nav-current" aria-current="page" href="/aspects/">Аспекты</a>
         </nav>
-        <div class="header-actions"><div class="coin-pill" title="Мои монеты"><img src="/assets/coins.png" alt="" width="30" height="30"/><strong id="coin-balance" aria-label="Баланс монет">0</strong></div><button
-          class="share"
-          id="share"
-          aria-label="Ссылка на блок"
-          aria-haspopup="dialog"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.6"
-          >
-            <path
-              d="m10 13 4-4m-6 7-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 4a4 4 0 0 0 6 0l4-4a4 4 0 0 0-6-6l-1 1"
-              transform="translate(1 2) scale(.9)"
-            />
-          </svg>
-        </button></div>
+        <div class="header-actions">
+          <div class="coin-pill" title="Мои монеты"><img src="/assets/coins.png" alt="" width="30" height="30" /><strong id="coin-balance" aria-label="Баланс монет">0</strong></div>
+          <button class="share" id="share" aria-label="Ссылка на блок" aria-haspopup="dialog">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="m10 13 4-4m-6 7-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 4a4 4 0 0 0 6 0l4-4a4 4 0 0 0-6-6l-1 1" transform="translate(1 2) scale(.9)" /></svg>
+          </button>
+        </div>
       </header>
-      <main class="sphere-page">
-        <a href="/aspects/" class="back-link">← Все аспекты</a>
-        <div class="sphere-page-heading">
-          <span id="sphere-color"></span>
+
+      <main class="sp">
+        <a href="/aspects/" class="sp-back">← Все аспекты</a>
+        <div class="sp-head">
+          <span id="sphere-color" class="sp-dot"></span>
           <h1 id="sphere-name"></h1>
         </div>
-        <p id="sphere-error" role="status"></p>
-        <section class="development-panel" data-section="vision">
-          <div class="section-title">
-            <div>
-              <span class="eyebrow">01 / НАПРАВЛЕНИЕ</span>
-              <h2>Моё видение</h2>
-            </div>
-            <button data-copy-section="vision" class="quiet-button">
-              Ссылка ↗
-            </button>
+        <p id="sphere-error" class="sp-toast" role="status" aria-live="polite"></p>
+
+        <section class="sp-card" data-section="practices" aria-labelledby="practices-title">
+          <div class="sp-card-head">
+            <h2 id="practices-title">Ежедневные занятия</h2>
+            <p id="practice-summary" class="sp-summary"></p>
           </div>
-          <form data-plan="vision">
-            <label for="vision">Каким я хочу себя видеть</label
-            ><textarea
-              id="vision"
-              name="vision"
-              rows="5"
-              maxlength="5000"
-              placeholder="Опиши желаемое состояние в этой сфере"
-            ></textarea
-            ><label for="deadline">К какому сроку</label
-            ><input id="deadline" name="deadline" type="date" /><button
-              class="add-block"
-              type="submit"
-            >
-              Сохранить видение
-            </button>
+          <ul id="practice-list" class="sp-list"></ul>
+          <button type="button" id="practice-add" class="sp-add">＋ Добавить занятие</button>
+        </section>
+
+        <section class="sp-card" data-section="goals" aria-labelledby="goals-title">
+          <div class="sp-card-head">
+            <h2 id="goals-title">Цели на <span id="goal-year"></span></h2>
+            <p id="goal-summary" class="sp-summary"></p>
+          </div>
+          <ul id="goal-list" class="sp-list"></ul>
+          <form id="goal-form" class="sp-goal-form">
+            <label for="goal-text" class="sp-sr">Новая цель</label>
+            <input id="goal-text" maxlength="300" placeholder="Новая цель на год" autocomplete="off" required />
+            <button class="sp-primary">Добавить</button>
           </form>
         </section>
-        <section class="development-panel" data-section="tools">
-          <div class="section-title">
-            <div>
-              <span class="eyebrow">02 / ДЕЙСТВИЯ</span>
-              <h2>Мои инструменты</h2>
-            </div>
-            <button data-copy-section="tools" class="quiet-button">
-              Ссылка ↗
-            </button>
-          </div>
-          <form data-plan="tools">
-            <label for="tools">Что помогает двигаться к цели</label
-            ><textarea
-              id="tools"
-              name="tools"
-              rows="4"
-              maxlength="5000"
-              placeholder="Методы, книги, курсы, практики и полезные ссылки"
-            ></textarea
-            ><p class="tools-hint">Каждый инструмент пиши с новой строки — ниже их можно менять местами.</p>
-            <div id="tools-sort-list" class="tool-sort-list"></div
-            ><button class="add-block" type="submit">
-              Сохранить инструменты
-            </button>
-          </form>
-          <div class="section-title practice-heading">
-            <h3>Ежедневные занятия</h3>
-          </div>
-          <div id="sphere-practices"></div>
-          <form id="practice-form" class="practice-form">
-            <div>
-              <label for="practice-name">Название занятия</label>
-              <input
-                id="practice-name"
-                required
-                maxlength="100"
-                placeholder="Например, чтение"
-              />
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-              <div>
-                <label for="practice-target">Минут в день</label>
-                <input
-                  id="practice-target"
-                  type="number"
-                  min="1"
-                  max="1440"
-                  value="30"
-                  required
-                />
-              </div>
-              <div>
-                <label for="practice-rate">Монет за минуту</label>
-                <input
-                  id="practice-rate"
-                  type="number"
-                  min="0"
-                  max="1000000"
-                  step="0.01"
-                  value="1"
-                  required
-                />
-              </div>
-            </div>
-            <div class="practice-rate-presets">
-              <span style="font-size:12px;color:#678294">Награда за минуту:</span>
-              <button type="button" class="practice-rate-chip" data-rate="0.5">0.5</button>
-              <button type="button" class="practice-rate-chip" data-rate="1">1</button>
-              <button type="button" class="practice-rate-chip" data-rate="2">2</button>
-              <button type="button" class="practice-rate-chip" data-rate="5">5</button>
-              <button type="button" class="practice-rate-chip" data-rate="10">10</button>
-            </div>
-            <div style="display:flex;gap:10px;margin-top:12px">
-              <button class="add-block" type="submit" id="practice-save">
-                Добавить
-              </button>
-              <button
-                type="button"
-                class="quiet-button"
-                id="practice-cancel"
-                hidden
-              >
-                Отмена
-              </button>
-            </div>
-          </form>
-        </section>
-        <section class="development-panel" data-section="results">
-          <div class="section-title">
-            <div>
-              <span class="eyebrow">03 / ИЗМЕНЕНИЯ</span>
-              <h2>Мои результаты</h2>
-            </div>
-            <button data-copy-section="results" class="quiet-button">
-              Ссылка ↗
-            </button>
-          </div>
-          <form data-plan="results">
-            <label for="results">Что уже получилось</label
-            ><textarea
-              id="results"
-              name="results"
-              rows="5"
-              maxlength="5000"
-              placeholder="Конкретные достижения и наблюдения"
-            ></textarea
-            ><button class="add-block" type="submit">
-              Сохранить результаты
-            </button>
-          </form>
-          <div id="sphere-history" class="time-history"></div>
-        </section>
+
+        <div id="sphere-tools" data-section="tools"></div>
       </main>
     </div>
+
     <dialog id="share-dialog">
-      <form method="dialog">
-        <button class="close" aria-label="Закрыть">×</button>
-      </form>
+      <form method="dialog"><button class="close" aria-label="Закрыть">×</button></form>
       <h2>Ссылка на блок</h2>
       <p>Аспекты можно открыть отдельно или вставить в Notion через /embed.</p>
       <label for="embed-url">Для вставки в Notion</label>
-      <div class="copy-row">
-        <input id="embed-url" readonly /><button id="copy">Копировать</button>
-      </div>
-      <a id="standalone" target="_blank" rel="noopener"
-        >Открыть блок отдельно ↗</a
-      >
-      <p class="hint">
-        Для отображения в Notion адрес должен быть доступен в интернете и
-        разрешать встраивание. Приватная страница может потребовать входа.
-      </p>
+      <div class="copy-row"><input id="embed-url" readonly /><button id="copy">Копировать</button></div>
+      <a id="standalone" target="_blank" rel="noopener">Открыть блок отдельно ↗</a>
+      <p class="hint">Для отображения в Notion адрес должен быть доступен в интернете и разрешать встраивание. Приватная страница может потребовать входа.</p>
       <span id="copy-status" role="status"></span>
     </dialog>
   </body>
 </html>
-

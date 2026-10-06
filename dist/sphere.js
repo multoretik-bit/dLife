@@ -1,210 +1,178 @@
-import { SPHERES, sphereFor, dateKey } from "./schedule.js";
+import { SPHERES } from "./schedule.js";
 import { ScheduleStore } from "./store.js";
 import { mountStudy } from "./study.js";
-import {
-  normalize,
-  progressMinutes,
-  escapeHTML as esc,
-} from "./development.js";
-const $ = (s) => document.querySelector(s),
-  params = new URLSearchParams(location.search),
-  id = params.get("id"),
-  sphere = SPHERES.find((s) => s.id === id),
-  store = new ScheduleStore();
-let state = null,
-  busy = false,
-  editing = null,
-  draggedPractice = null,
-  draggedTool = null;
-const blank = () => ({ vision: "", deadline: "", tools: "", results: "" });
-function message(s) {
-  $("#sphere-error").textContent = s;
+import { normalize, progressMinutes, escapeHTML as esc } from "./development.js";
+
+const $ = (s) => document.querySelector(s);
+const params = new URLSearchParams(location.search);
+const id = params.get("id");
+const sphere = SPHERES.find((s) => s.id === id);
+const store = new ScheduleStore();
+const year = new Date().getFullYear();
+const icon = {
+  edit: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Zm9-13 4 4"/></svg>',
+  remove: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  check: '<svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+};
+let state = null, busy = false, editing = null, dragged = null, toastTimer;
+
+function message(text, sticky = false) {
+  const el = $("#sphere-error");
+  clearTimeout(toastTimer);
+  el.textContent = text;
+  if (!sticky && text) toastTimer = setTimeout(() => (el.textContent = ""), 2500);
 }
+
 async function save(next) {
   if (busy) return false;
   busy = true;
-  document
-    .querySelectorAll('button[type="submit"]')
-    .forEach((b) => (b.disabled = true));
   try {
     state = normalize(await store.save(next));
     message("Сохранено");
-    renderPractices();
-    renderTools();
+    render();
     return true;
   } catch (e) {
-    message(e.message);
+    message(e.message, true);
     return false;
   } finally {
     busy = false;
-    document
-      .querySelectorAll('button[type="submit"]')
-      .forEach((b) => (b.disabled = false));
   }
 }
+const change = (fn) => { const next = structuredClone(state); fn(next); return save(next); };
+const plan = (s) => (s.spherePlans[id] ??= { vision: "", deadline: "", tools: "", results: "" });
+
+/* ---------- Ежедневные занятия ---------- */
+const practices = () => state.practices.filter((p) => p.sphereId === id);
+
+function practiceForm(p = { name: "", target: 30, coinRate: 1 }) {
+  return `<li class="sp-row is-editing"><form class="sp-practice-form" data-practice-form="${esc(p.id || "")}">
+    <label class="sp-sr" for="pf-name">Название занятия</label><input id="pf-name" name="name" value="${esc(p.name)}" maxlength="100" placeholder="Название, например «Чтение»" required>
+    <label class="sp-num"><input name="target" type="number" min="1" max="1440" value="${p.target}" required aria-label="Минут в день"><span>мин/день</span></label>
+    <label class="sp-num"><input name="rate" type="number" min="0" max="1000000" step="0.01" value="${p.coinRate ?? 1}" required aria-label="Монет за минуту"><span>монет/мин</span></label>
+    <div class="sp-form-actions"><button class="sp-primary">${p.id ? "Сохранить" : "Добавить"}</button><button type="button" class="sp-ghost" data-cancel>Отмена</button></div>
+  </form></li>`;
+}
+
 function renderPractices() {
-  const list = state.practices.filter((p) => p.sphereId === id);
-  $("#sphere-practices").innerHTML = list.length
-    ? list
-        .map(
-          (p) =>
-            `<div class="practice-edit-row" draggable="true" data-practice-id="${esc(p.id)}"><button type="button" class="quiet-button drag-grip" aria-label="Перетащить ${esc(p.name)}">⋮⋮</button><div><strong>${esc(p.name)}</strong><small>${progressMinutes(state, p.id)} / ${p.target} мин сегодня · ${p.coinRate ?? 1} монет/мин</small></div><div class="reorder-controls"><button type="button" class="quiet-button" data-move-practice="up" data-move-id="${esc(p.id)}" aria-label="Поднять выше">↑</button><button type="button" class="quiet-button" data-move-practice="down" data-move-id="${esc(p.id)}" aria-label="Опустить ниже">↓</button></div><button type="button" class="quiet-button" data-edit-practice="${esc(p.id)}">Изменить</button><button type="button" class="quiet-button" data-remove-practice="${esc(p.id)}" aria-label="Удалить ${esc(p.name)}">×</button></div>`,
-        )
-        .join("")
-    : '<p class="empty-line">Добавь отдельную норму для каждого занятия.</p>';
-  $("#sphere-history").innerHTML =
-    "<h3>Записанные занятия</h3>" +
-    state.logs
-      .filter((l) => l.sphereId === id)
-      .slice(-30)
-      .reverse()
-      .map(
-        (l) =>
-          `<div class="history-row"><div><strong>${esc(l.note || state.practices.find((p) => p.id === l.practiceId)?.name || sphere.name)}</strong><small>${l.date}</small></div><b>${l.minutes} мин</b></div>`,
-      )
-      .join("");
+  const list = practices();
+  const done = list.reduce((n, p) => n + Math.min(progressMinutes(state, p.id), p.target), 0);
+  const total = list.reduce((n, p) => n + p.target, 0);
+  $("#practice-summary").textContent = list.length ? `Сегодня ${done} из ${total} мин` : "";
+  const rows = list.map((p) => {
+    if (editing === p.id) return practiceForm(p);
+    const value = progressMinutes(state, p.id), pct = Math.min(100, (value / p.target) * 100), complete = value >= p.target;
+    return `<li class="sp-row sp-practice${complete ? " is-done" : ""}" draggable="true" data-id="${esc(p.id)}">
+      <span class="sp-grip" aria-hidden="true">⋮⋮</span>
+      <div class="sp-practice-main"><div class="sp-practice-top"><strong>${esc(p.name)}</strong><span>${complete ? icon.check : ""}${value} / ${p.target} мин</span></div><div class="sp-bar"><i style="width:${pct}%"></i></div></div>
+      <span class="sp-rate" title="Монет за минуту"><img src="/assets/coins.png" alt="" width="16" height="16">${p.coinRate ?? 1}/мин</span>
+      <button type="button" class="sp-icon" data-edit="${esc(p.id)}" aria-label="Изменить ${esc(p.name)}">${icon.edit}</button>
+      <button type="button" class="sp-icon sp-danger" data-remove="${esc(p.id)}" aria-label="Удалить ${esc(p.name)}">${icon.remove}</button>
+    </li>`;
+  });
+  if (editing === "new") rows.push(practiceForm());
+  $("#practice-list").innerHTML = rows.join("") || '<li class="sp-empty">Добавь занятия с дневной нормой — их прогресс появится здесь.</li>';
+  $("#practice-add").hidden = editing !== null;
+  $('#practice-list [name="name"]')?.focus();
 }
-const toolLines = () => String($("#tools")?.value || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-function renderTools() {
-  const root = $("#tools-sort-list"); if (!root) return;
-  const tools = toolLines();
-  root.innerHTML = tools.map((tool, index) => `<div class="tool-sort-row" draggable="true" data-tool-index="${index}"><button type="button" class="quiet-button drag-grip" aria-label="Перетащить инструмент">⋮⋮</button><span>${esc(tool)}</span><div class="reorder-controls"><button type="button" class="quiet-button" data-move-tool="up" data-tool-index="${index}" aria-label="Поднять выше">↑</button><button type="button" class="quiet-button" data-move-tool="down" data-tool-index="${index}" aria-label="Опустить ниже">↓</button></div></div>`).join("");
+
+function movePractice(fromId, toId) {
+  const next = structuredClone(state), own = next.practices.filter((p) => p.sphereId === id);
+  const a = own.findIndex((p) => p.id === fromId), b = own.findIndex((p) => p.id === toId);
+  if (a < 0 || b < 0 || a === b) return;
+  own.splice(b, 0, own.splice(a, 1)[0]);
+  let i = 0;
+  next.practices = next.practices.map((p) => (p.sphereId === id ? own[i++] : p));
+  save(next);
 }
-async function persistTools(tools) {
-  const next = structuredClone(state), plan = { ...blank(), ...next.spherePlans[id], tools: tools.join("\n") };
-  next.spherePlans[id] = plan; $("#tools").value = plan.tools; await save(next);
+
+/* ---------- Цели на год ---------- */
+function renderGoals() {
+  const goals = state.spherePlans[id]?.goals || [];
+  const done = goals.filter((g) => g.done).length;
+  $("#goal-year").textContent = year;
+  $("#goal-summary").textContent = goals.length ? `${done} из ${goals.length} выполнено` : "";
+  $("#goal-list").innerHTML = goals.map((g) => `<li class="sp-row sp-goal${g.done ? " is-done" : ""}">
+      <button type="button" class="sp-check" data-goal-toggle="${esc(g.id)}" role="checkbox" aria-checked="${g.done}" aria-label="${esc(g.text)}">${icon.check}</button>
+      <span>${esc(g.text)}</span>
+      <button type="button" class="sp-icon sp-danger" data-goal-remove="${esc(g.id)}" aria-label="Удалить цель">${icon.remove}</button>
+    </li>`).join("") || '<li class="sp-empty">Чего хочешь достичь в этой сфере к концу года?</li>';
 }
-function swapSpherePractices(next, firstId, secondId) {
-  const visible = next.practices.filter((entry) => entry.sphereId === id), a = visible.findIndex((entry) => entry.id === firstId), b = visible.findIndex((entry) => entry.id === secondId);
-  if (a < 0 || b < 0 || a === b) return false; [visible[a], visible[b]] = [visible[b], visible[a]];
-  let cursor = 0; next.practices = next.practices.map((entry) => entry.sphereId === id ? visible[cursor++] : entry); return true;
+
+function render() {
+  renderPractices();
+  renderGoals();
 }
+
 if (!sphere) {
   $("#sphere-name").textContent = "Сфера не найдена";
-  document
-    .querySelectorAll(".development-panel")
-    .forEach((el) => (el.hidden = true));
+  document.querySelectorAll("[data-section]").forEach((el) => (el.hidden = true));
 } else {
   $("#sphere-name").textContent = sphere.name;
   $("#sphere-color").style.background = sphere.color;
   document.documentElement.style.setProperty("--sphere-accent", sphere.color);
   document.title = `dLife — ${sphere.name}`;
-  if (
-    location.pathname.startsWith("/embed/") &&
-    ["vision", "tools", "results"].includes(params.get("section"))
-  ) {
-    document
-      .querySelectorAll("[data-section]")
-      .forEach(
-        (el) => (el.hidden = el.dataset.section !== params.get("section")),
-      );
-  }
-  for (const b of document.querySelectorAll("[data-copy-section]"))
-    b.addEventListener("click", async () => {
-      const url = new URL("/embed/sphere/", location.origin);
-      url.searchParams.set("id", id);
-      url.searchParams.set("section", b.dataset.copySection);
-      try {
-        await navigator.clipboard.writeText(url.href);
-        message("Ссылка на блок скопирована");
-      } catch {
-        prompt("Ссылка на блок", url.href);
-      }
-    });
-  for (const form of document.querySelectorAll("[data-plan]"))
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!state || busy) return;
-      const next = structuredClone(state),
-        plan = { ...blank(), ...next.spherePlans[id] },
-        field = form.dataset.plan;
-      plan[field] = form.elements[field].value;
-      if (field === "vision") plan.deadline = form.elements.deadline.value;
-      next.spherePlans[id] = plan;
-      await save(next);
-    });
-  $("#practice-form").addEventListener("submit", async (e) => {
+
+  // Встраивание отдельного блока: /embed/sphere/?id=10&section=practices|goals|tools
+  const legacy = { vision: "goals", results: "practices" }, section = legacy[params.get("section")] || params.get("section");
+  if (location.pathname.startsWith("/embed/") && ["practices", "goals", "tools"].includes(section))
+    document.querySelectorAll("[data-section]").forEach((el) => (el.hidden = el.dataset.section !== section));
+
+  $("#practice-add").addEventListener("click", () => { editing = "new"; renderPractices(); });
+
+  $("#practice-list").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b || busy) return;
+    if (b.dataset.edit) { editing = b.dataset.edit; renderPractices(); }
+    if (b.dataset.cancel !== undefined) { editing = null; renderPractices(); }
+    if (b.dataset.remove && confirm("Удалить занятие? Записанное время сохранится.")) {
+      const removeId = b.dataset.remove;
+      change((s) => (s.practices = s.practices.filter((p) => p.id !== removeId)));
+    }
+  });
+
+  $("#practice-list").addEventListener("submit", async (e) => {
     e.preventDefault();
-    if (!state || busy) return;
-    const name = $("#practice-name").value.trim(),
-      target = Number($("#practice-target").value),
-      coinRate = Number($("#practice-rate")?.value || 1);
-    if (!name || !Number.isInteger(target) || target < 1 || target > 1440)
-      return message("Укажи название и норму от 1 до 1440 минут.");
-    const next = structuredClone(state),
-      entry = {
-        id: editing || crypto.randomUUID(),
-        sphereId: id,
-        name,
-        target,
-        coinRate: Number.isFinite(coinRate) && coinRate >= 0 ? coinRate : 1,
-      },
-      index = next.practices.findIndex((p) => p.id === entry.id);
-    if (index < 0) next.practices.push(entry);
-    else next.practices[index] = entry;
-    if (await save(next)) resetPractice();
-  });
-  function resetPractice() {
+    const f = e.target, d = new FormData(f), name = d.get("name").trim(), target = Number(d.get("target")), coinRate = Number(d.get("rate"));
+    if (!name || !Number.isInteger(target) || target < 1 || target > 1440) return message("Укажи название и норму от 1 до 1440 минут.", true);
+    const entry = { id: f.dataset.practiceForm || crypto.randomUUID(), sphereId: id, name, target, coinRate: Number.isFinite(coinRate) && coinRate >= 0 ? coinRate : 1 };
+    const prev = editing;
     editing = null;
-    $("#practice-form").reset();
-    if ($("#practice-rate")) $("#practice-rate").value = "1";
-    $("#practice-save").textContent = "Добавить";
-    $("#practice-cancel").hidden = true;
-  }
-  $("#practice-cancel").addEventListener("click", resetPractice);
-  document.querySelectorAll(".practice-rate-chip").forEach((chip) => {
-    chip.addEventListener("click", () => {
-      const rateInput = $("#practice-rate");
-      if (rateInput && chip.dataset.rate) {
-        rateInput.value = chip.dataset.rate;
-      }
+    const ok = await change((s) => {
+      const i = s.practices.findIndex((p) => p.id === entry.id);
+      if (i < 0) s.practices.push(entry); else s.practices[i] = { ...s.practices[i], ...entry };
     });
+    if (!ok) { editing = prev; renderPractices(); }
   });
-  $("#sphere-practices").addEventListener("click", async (e) => {
-    if (busy) return;
-    const move = e.target.dataset.movePractice, moveId = e.target.dataset.moveId;
-    if (move && moveId) { const visible = state.practices.filter((entry) => entry.sphereId === id), index = visible.findIndex((entry) => entry.id === moveId), other = visible[index + (move === "up" ? -1 : 1)]; if (other) { const next = structuredClone(state); if (swapSpherePractices(next, moveId, other.id)) await save(next); } return; }
-    const edit = e.target.dataset.editPractice,
-      remove = e.target.dataset.removePractice;
-    if (edit) {
-      const p = state.practices.find((p) => p.id === edit);
-      editing = p.id;
-      $("#practice-name").value = p.name;
-      $("#practice-target").value = p.target;
-      if ($("#practice-rate")) $("#practice-rate").value = p.coinRate ?? 1;
-      $("#practice-save").textContent = "Сохранить";
-      $("#practice-cancel").hidden = false;
-      $("#practice-name").focus();
-    }
-    if (
-      remove &&
-      confirm("Удалить дневную норму? Записанные занятия сохранятся.")
-    ) {
-      const next = structuredClone(state);
-      next.practices = next.practices.filter((p) => p.id !== remove);
-      await save(next);
-      resetPractice();
-    }
+
+  $("#practice-list").addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && editing) { editing = null; renderPractices(); }
   });
-  $("#sphere-practices").addEventListener("dragstart", (event) => { const row = event.target.closest("[data-practice-id]"); if (!row) return; draggedPractice = row.dataset.practiceId; row.classList.add("is-dragging"); event.dataTransfer.setData("text/plain", draggedPractice); });
-  $("#sphere-practices").addEventListener("dragover", (event) => { const row = event.target.closest("[data-practice-id]"); if (!row || row.dataset.practiceId === draggedPractice) return; event.preventDefault(); row.classList.add("drag-over"); });
-  $("#sphere-practices").addEventListener("drop", async (event) => { const row = event.target.closest("[data-practice-id]"); event.preventDefault(); if (!row || !draggedPractice || busy) return; const next = structuredClone(state); if (swapSpherePractices(next, draggedPractice, row.dataset.practiceId)) await save(next); });
-  $("#sphere-practices").addEventListener("dragend", () => { draggedPractice = null; $("#sphere-practices").querySelectorAll(".is-dragging,.drag-over").forEach((node) => node.classList.remove("is-dragging", "drag-over")); });
-  $("#tools").addEventListener("input", renderTools);
-  $("#tools-sort-list").addEventListener("click", async (event) => { const direction = event.target.dataset.moveTool, index = Number(event.target.dataset.toolIndex); if (!direction || busy) return; const tools = toolLines(), other = index + (direction === "up" ? -1 : 1); if (other < 0 || other >= tools.length) return; [tools[index], tools[other]] = [tools[other], tools[index]]; await persistTools(tools); });
-  $("#tools-sort-list").addEventListener("dragstart", (event) => { const row = event.target.closest("[data-tool-index]"); if (!row) return; draggedTool = Number(row.dataset.toolIndex); row.classList.add("is-dragging"); event.dataTransfer.setData("text/plain", String(draggedTool)); });
-  $("#tools-sort-list").addEventListener("dragover", (event) => { const row = event.target.closest("[data-tool-index]"); if (!row || Number(row.dataset.toolIndex) === draggedTool) return; event.preventDefault(); row.classList.add("drag-over"); });
-  $("#tools-sort-list").addEventListener("drop", async (event) => { const row = event.target.closest("[data-tool-index]"); event.preventDefault(); const target = Number(row?.dataset.toolIndex); if (!Number.isInteger(target) || !Number.isInteger(draggedTool) || target === draggedTool || busy) return; const tools = toolLines(); [tools[draggedTool], tools[target]] = [tools[target], tools[draggedTool]]; await persistTools(tools); });
-  $("#tools-sort-list").addEventListener("dragend", () => { draggedTool = null; $("#tools-sort-list").querySelectorAll(".is-dragging,.drag-over").forEach((node) => node.classList.remove("is-dragging", "drag-over")); });
+
+  const list = $("#practice-list");
+  list.addEventListener("dragstart", (e) => { const row = e.target.closest("[data-id]"); if (!row) return; dragged = row.dataset.id; row.classList.add("is-dragging"); e.dataTransfer.effectAllowed = "move"; });
+  list.addEventListener("dragover", (e) => { const row = e.target.closest("[data-id]"); if (!row || row.dataset.id === dragged) return; e.preventDefault(); list.querySelectorAll(".drag-over").forEach((n) => n.classList.remove("drag-over")); row.classList.add("drag-over"); });
+  list.addEventListener("drop", (e) => { e.preventDefault(); const row = e.target.closest("[data-id]"); if (row && dragged && !busy) movePractice(dragged, row.dataset.id); });
+  list.addEventListener("dragend", () => { dragged = null; list.querySelectorAll(".is-dragging,.drag-over").forEach((n) => n.classList.remove("is-dragging", "drag-over")); });
+
+  $("#goal-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = $("#goal-text"), text = input.value.trim();
+    if (!text || !state || busy) return;
+    if (await change((s) => (plan(s).goals ??= []).push({ id: crypto.randomUUID(), text, done: false }))) { input.value = ""; input.focus(); }
+  });
+
+  $("#goal-list").addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b || busy) return;
+    if (b.dataset.goalToggle) change((s) => { const g = plan(s).goals.find((x) => x.id === b.dataset.goalToggle); g.done = !g.done; });
+    if (b.dataset.goalRemove && confirm("Удалить цель?")) change((s) => (plan(s).goals = plan(s).goals.filter((x) => x.id !== b.dataset.goalRemove)));
+  });
+
   try {
     state = normalize(await store.load());
-    const p = { ...blank(), ...state.spherePlans[id] };
-    for (const f of ["vision", "deadline", "tools", "results"])
-      $("#" + f).value = p[f];
-    renderPractices();
-    renderTools();
+    render();
+    mountStudy({ root: $("#sphere-tools"), sphereId: id, getState: () => state, save, getBackend: () => store.backend });
   } catch (e) {
-    message(e.message);
+    message(e.message, true);
   }
-  if(state) mountStudy({sphereId:id,getState:()=>state,save,getBackend:()=>store.backend});
 }

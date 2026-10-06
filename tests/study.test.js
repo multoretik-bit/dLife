@@ -19,3 +19,12 @@ test('new state rejects invalid books, unsafe links and malformed progress',()=>
  assert.equal(validateStudy({english:{season:0,episode:1,position:'',notes:''}}),false);
  assert.equal(validateStudy({resources:[{id:'a',sphereId:'10',title:'X',url:'data:text/html,x'}]}),false);
 });
+test('sphere plans accept yearly goals and reject malformed ones',()=>{
+ const plan={vision:'',deadline:'',tools:'',results:''};
+ const withGoals=goals=>({...emptyState(),spherePlans:{'10':{...plan,goals}}});
+ assert.ok(validateState(withGoals([{id:'g1',text:'Прочитать 24 книги',done:false}])));
+ assert.ok(validateState({...emptyState(),spherePlans:{'10':plan}}));
+ assert.equal(validateState(withGoals([{id:'g1',text:'  ',done:false}])),false);
+ assert.equal(validateState(withGoals([{id:'g1',text:'A',done:'yes'}])),false);
+ assert.equal(validateState(withGoals([{id:'g1',text:'A',done:false},{id:'g1',text:'B',done:true}])),false);
+});

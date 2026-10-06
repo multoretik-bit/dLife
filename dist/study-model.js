@@ -1,9 +1,11 @@
 import { CATALOG } from './library-catalog.js';
 export const VIDEO_URL = 'https://kinogomy.net/cartoons/555-griffiny-hd-mvisionstv13-v54.html';
+export const DLANG_URL = 'https://den-english-10000.tivishka.chatgpt.site';
+export const HISTORY_NOTION_URL = 'https://app.notion.com/p/24c8171a481c80cb8553e9ca2723c9c0';
 export function library(state) { return state.study?.books ?? CATALOG; }
 export function changeStudy(state, change) {
   const next=structuredClone(state);
-  next.study={books:structuredClone(library(state)),english:{season:1,episode:1,position:'',notes:''},...next.study};
+  next.study={books:structuredClone(library(state)),...next.study};
   change(next.study); return next;
 }
 export function safeURL(value) { try {const u=new URL(value); return u.protocol==='https:'&&!u.username&&!u.password?u.href:'';} catch{return '';} }
