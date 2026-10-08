@@ -1,6 +1,7 @@
 import { SPHERES } from "./schedule.js";
 import { ScheduleStore } from "./store.js";
 import { mountStudy } from "./study.js";
+import { mountCalories } from "./health.js";
 import { normalize, progressMinutes, escapeHTML as esc } from "./development.js";
 
 const $ = (s) => document.querySelector(s);
@@ -171,6 +172,7 @@ if (!sphere) {
   try {
     state = normalize(await store.load());
     render();
+    if (id === "2") mountCalories({ before: $('[data-section="practices"]'), getState: () => state, save });
     mountStudy({ root: $("#sphere-tools"), sphereId: id, getState: () => state, save, getBackend: () => store.backend });
   } catch (e) {
     message(e.message, true);

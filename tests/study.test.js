@@ -44,3 +44,9 @@ test('books saved before the catalog grew get the new books once, and a later re
  assert.equal(next.study.catalogVersion,2);assert.ok(validateState(next));
  assert.equal(library(next).length,209);assert.ok(!library(next).some(b=>b.id==='library-bible'));
 });
+test('daily burned calories are stored per date as whole numbers',()=>{
+ assert.ok(validateState({...emptyState(),calories:{'2026-10-08':320}}));
+ assert.equal(validateState({...emptyState(),calories:{'2026-10-08':-5}}),false);
+ assert.equal(validateState({...emptyState(),calories:{'2026-10-08':12.5}}),false);
+ assert.equal(validateState({...emptyState(),calories:{'вчера':100}}),false);
+});
