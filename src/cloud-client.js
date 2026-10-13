@@ -57,3 +57,12 @@ export async function joinSyncCode(code,initialState){
   return data;
 }
 export function disableCodeSync(){localStorage.removeItem('dlife-code-enabled');}
+
+// dCapital — отдельный проект Supabase с кошельками; вход в него не связан с синхронизацией dLife.
+const DCAPITAL_URL='https://jhjzquxponlcblraiehq.supabase.co';
+const DCAPITAL_KEY='sb_publishable_ukklfpIIiTgk-lmw83DPBg_cF-gRWzo';
+let dcapital;
+export function dcapitalClient(){
+  dcapital??=createClient(DCAPITAL_URL,DCAPITAL_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'dlife-dcapital-session'}});
+  return dcapital;
+}

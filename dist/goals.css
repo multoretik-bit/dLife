@@ -1,0 +1,55 @@
+/* Цели: страница /goals/ и карточки на главной. Использует токены theme.css и классы sphere.css. */
+
+.gl-head h1 { margin: 0; font-size: clamp(34px, 5vw, 48px); font-weight: 800; letter-spacing: -1.5px; }
+.gl-head p { margin: 8px 0 0; color: var(--ink-2); font-size: 16px; }
+
+.gl-tiers { display: grid; grid-template-columns: 0.8fr repeat(3, 1fr); gap: 12px; }
+.gl-tier { position: relative; display: grid; align-content: start; gap: 4px; padding: 18px 18px 16px; border: 1px solid var(--line); border-radius: 20px; background: var(--card); color: var(--ink); text-align: left; cursor: pointer; transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), border-color 0.2s; }
+.gl-tier:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.gl-tier[aria-pressed="true"] { border-color: transparent; box-shadow: 0 0 0 2px var(--tier, var(--ink)), var(--shadow); }
+.gl-tier-icon { font-size: 22px; line-height: 1; margin-bottom: 6px; }
+.gl-tier strong { font-size: 16px; font-weight: 800; letter-spacing: -0.2px; }
+.gl-tier small { color: var(--muted); font-size: 13px; font-weight: 600; line-height: 1.35; }
+.gl-tier b { position: absolute; top: 16px; right: 16px; font-size: 15px; font-weight: 800; color: var(--ink-2); }
+.gl-tier.gl-all { --tier: var(--ink); }
+.gl-tier.gl-wish { --tier: #e0679a; background: linear-gradient(160deg, #fff0f6, #fff 60%); }
+.gl-tier.gl-goal { --tier: #3a6dff; background: linear-gradient(160deg, #eaf1ff, #fff 60%); }
+.gl-tier.gl-vision { --tier: #8a63d2; background: linear-gradient(160deg, #f3edff, #fff 60%); }
+
+.gl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; align-items: start; }
+.gl-card { padding: 20px 22px; border-top: 4px solid var(--accent); }
+.gl-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.gl-card-head a { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); font-size: 18px; font-weight: 800; text-decoration: none; }
+.gl-card-head a:hover { color: var(--blue-deep); }
+.gl-card-head .sp-dot { width: 14px; height: 14px; border-radius: 5px; }
+.gl-card-head small { color: var(--muted); font-size: 13px; font-weight: 700; }
+
+.gl-group { margin-top: 10px; }
+.gl-group h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 2px; color: var(--muted); font-size: 12.5px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; }
+.gl-item { min-height: 46px; }
+.gl-item span { font-size: 15px; }
+.gl-wish .sp-check { border-radius: 50%; }
+.gl-wish .is-done .sp-check, .gl-wish .sp-goal.is-done .sp-check { background: #e0679a; border-color: #e0679a; }
+.gl-vision .sp-goal.is-done .sp-check { background: #8a63d2; border-color: #8a63d2; }
+.gl-vision .gl-item span { font-weight: 700; }
+.gl-form { display: flex; flex: 1; gap: 6px; }
+.gl-form input { flex: 1; min-width: 0; width: auto; border-radius: 999px; background: var(--soft); padding: 9px 16px; }
+.gl-add { margin: 6px 0 4px; }
+.gl-add .sp-primary { width: 42px; padding: 0; font-size: 18px; }
+.gl-quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.gl-plus { min-height: 34px; padding: 4px 12px; border: 1px dashed var(--line); border-radius: 999px; background: transparent; color: var(--ink-2); font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.2s, border-color 0.2s, color 0.2s; }
+.gl-plus:hover { border-color: var(--accent); color: var(--ink); background: var(--soft); }
+
+/* Главная: действия в карточках */
+.stat-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+.goals-card strong small, .capital-card strong small { margin-left: 4px; font-size: 0.45em; color: var(--muted); font-weight: 700; letter-spacing: 0; word-spacing: normal; }
+
+@media (max-width: 900px) {
+  .gl-tiers { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 760px) {
+  .gl-grid { grid-template-columns: 1fr; }
+  .gl-card { padding: 18px 16px; }
+  .gl-tier { padding: 14px; }
+  .gl-tier small { display: none; }
+}

@@ -9,7 +9,6 @@ const params = new URLSearchParams(location.search);
 const id = params.get("id");
 const sphere = SPHERES.find((s) => s.id === id);
 const store = new ScheduleStore();
-const year = new Date().getFullYear();
 const icon = {
   edit: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Zm9-13 4 4"/></svg>',
   remove: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
@@ -40,7 +39,6 @@ async function save(next) {
   }
 }
 const change = (fn) => { const next = structuredClone(state); fn(next); return save(next); };
-const plan = (s) => (s.spherePlans[id] ??= { vision: "", deadline: "", tools: "", results: "" });
 
 /* ---------- Ежедневные занятия ---------- */
 const practices = () => state.practices.filter((p) => p.sphereId === id);
@@ -86,22 +84,8 @@ function movePractice(fromId, toId) {
   save(next);
 }
 
-/* ---------- Цели на год ---------- */
-function renderGoals() {
-  const goals = state.spherePlans[id]?.goals || [];
-  const done = goals.filter((g) => g.done).length;
-  $("#goal-year").textContent = year;
-  $("#goal-summary").textContent = goals.length ? `${done} из ${goals.length} выполнено` : "";
-  $("#goal-list").innerHTML = goals.map((g) => `<li class="sp-row sp-goal${g.done ? " is-done" : ""}">
-      <button type="button" class="sp-check" data-goal-toggle="${esc(g.id)}" role="checkbox" aria-checked="${g.done}" aria-label="${esc(g.text)}">${icon.check}</button>
-      <span>${esc(g.text)}</span>
-      <button type="button" class="sp-icon sp-danger" data-goal-remove="${esc(g.id)}" aria-label="Удалить цель">${icon.remove}</button>
-    </li>`).join("") || '<li class="sp-empty">Чего хочешь достичь в этой сфере к концу года?</li>';
-}
-
 function render() {
   renderPractices();
-  renderGoals();
 }
 
 if (!sphere) {
@@ -113,9 +97,9 @@ if (!sphere) {
   document.documentElement.style.setProperty("--sphere-accent", sphere.color);
   document.title = `dLife — ${sphere.name}`;
 
-  // Встраивание отдельного блока: /embed/sphere/?id=10&section=practices|goals|tools
-  const legacy = { vision: "goals", results: "practices" }, section = legacy[params.get("section")] || params.get("section");
-  if (location.pathname.startsWith("/embed/") && ["practices", "goals", "tools"].includes(section))
+  // Встраивание отдельного блока: /embed/sphere/?id=10&section=practices|calories|tools
+  const legacy = { vision: "practices", goals: "practices", results: "practices" }, section = legacy[params.get("section")] || params.get("section");
+  if (location.pathname.startsWith("/embed/") && ["practices", "calories", "tools"].includes(section))
     document.querySelectorAll("[data-section]").forEach((el) => (el.hidden = el.dataset.section !== section));
 
   $("#practice-add").addEventListener("click", () => { editing = "new"; renderPractices(); });
@@ -154,20 +138,6 @@ if (!sphere) {
   list.addEventListener("dragover", (e) => { const row = e.target.closest("[data-id]"); if (!row || row.dataset.id === dragged) return; e.preventDefault(); list.querySelectorAll(".drag-over").forEach((n) => n.classList.remove("drag-over")); row.classList.add("drag-over"); });
   list.addEventListener("drop", (e) => { e.preventDefault(); const row = e.target.closest("[data-id]"); if (row && dragged && !busy) movePractice(dragged, row.dataset.id); });
   list.addEventListener("dragend", () => { dragged = null; list.querySelectorAll(".is-dragging,.drag-over").forEach((n) => n.classList.remove("is-dragging", "drag-over")); });
-
-  $("#goal-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const input = $("#goal-text"), text = input.value.trim();
-    if (!text || !state || busy) return;
-    if (await change((s) => (plan(s).goals ??= []).push({ id: crypto.randomUUID(), text, done: false }))) { input.value = ""; input.focus(); }
-  });
-
-  $("#goal-list").addEventListener("click", (e) => {
-    const b = e.target.closest("button");
-    if (!b || busy) return;
-    if (b.dataset.goalToggle) change((s) => { const g = plan(s).goals.find((x) => x.id === b.dataset.goalToggle); g.done = !g.done; });
-    if (b.dataset.goalRemove && confirm("Удалить цель?")) change((s) => (plan(s).goals = plan(s).goals.filter((x) => x.id !== b.dataset.goalRemove)));
-  });
 
   try {
     state = normalize(await store.load());

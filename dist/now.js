@@ -10,6 +10,7 @@ import { ScheduleStore } from "./store.js";
 import {
   escapeHTML as esc,
   occurs,
+  repeatOf,
   completionKey,
   itemDate,
   habitBar,
@@ -47,6 +48,7 @@ async function load() {
     $("#now-card").hidden = true;
   }
 }
+const REPEAT_LABEL = { daily: "каждый день", weekly: "каждую неделю", until: "пока не выполню" };
 function row(item, date = itemDate(item, state.blocks)) {
   const key = completionKey(item, date),
     done = state.done[key],
@@ -54,7 +56,7 @@ function row(item, date = itemDate(item, state.blocks)) {
   const coinsBadge = item.coins
     ? `<span class="task-coin-badge" title="Награда: ${item.coins} монет">+${item.coins}<img class="coin-inline" src="/assets/coins.png" alt="монет"/></span>`
     : "";
-  return `<div class="activity-wrap" style="--item-color:${s.color}"><label class="activity-row"><input type="checkbox" data-item="${esc(item.id)}" data-date="${date}" ${done ? "checked" : ""} ${busy || date > dateKey() ? "disabled" : ""}><span class="activity-check"></span><span class="activity-name">${esc(item.name)}${coinsBadge}${item.time ? `<small>${item.time}${item.weekly ? " · каждую неделю" : ""}</small>` : ""}</span><span class="sphere-dot" title="${esc(s.name)}"></span></label>${item.type === "habit" ? habitBar(item, state.done, date) : ""}</div>`;
+  return `<div class="activity-wrap" style="--item-color:${s.color}"><label class="activity-row"><input type="checkbox" data-item="${esc(item.id)}" data-date="${date}" ${done ? "checked" : ""} ${busy || date > dateKey() ? "disabled" : ""}><span class="activity-check"></span><span class="activity-name">${esc(item.name)}${coinsBadge}${item.type === "task" && (item.time || REPEAT_LABEL[repeatOf(item)]) ? `<small>${[item.time, REPEAT_LABEL[repeatOf(item)]].filter(Boolean).join(" · ")}</small>` : ""}</span><span class="sphere-dot" title="${esc(s.name)}"></span></label>${item.type === "habit" ? habitBar(item, state.done, date) : ""}</div>`;
 }
 const rows = (items, date) =>
   items.length
@@ -105,7 +107,7 @@ function render() {
           (i) =>
             i.blockId === block.id &&
             i.type === type &&
-            occurs(i, itemDate(i, state.blocks)),
+            occurs(i, itemDate(i, state.blocks), state.done),
         ),
       );
   }
@@ -130,7 +132,7 @@ function render() {
     : "";
   const daily = (type) =>
     state.items
-      .filter((i) => !i.blockId && i.type === type && occurs(i, today))
+      .filter((i) => !i.blockId && i.type === type && occurs(i, today, state.done))
       .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
   $("#daily-tasks").innerHTML = rows(daily("task"), today);
   $("#daily-habits").innerHTML = rows(daily("habit"), today);
@@ -139,7 +141,7 @@ function render() {
         .map(
           (b) =>
             `<article class="schedule-block" style="--sphere:${sphereFor(b.sphereId).color}"><div class="schedule-time"><strong>${b.start}</strong><span>${b.end}</span></div><div class="schedule-body"><div class="section-title"><h2>${esc(b.name)}</h2><span class="sphere-tag"><i></i>${esc(sphereFor(b.sphereId).name)}</span></div>${rows(
-              state.items.filter((i) => i.blockId === b.id && occurs(i, today)),
+              state.items.filter((i) => i.blockId === b.id && occurs(i, today, state.done)),
               today,
             )}</div></article>`,
         )
@@ -168,7 +170,7 @@ function renderMonth() {
     d.setDate(d.getDate() + i);
     const key = dateKey(d),
       tasks = state.items.filter(
-        (t) => t.type === "task" && t.date && occurs(t, key),
+        (t) => t.type === "task" && t.date && occurs(t, key, state.done),
       );
     return `<button class="calendar-day ${d.getMonth() !== month.getMonth() ? "outside" : ""} ${key === dateKey() ? "is-today" : ""} ${key === selectedDate ? "selected" : ""}" data-calendar-date="${key}" aria-label="${dateLabel(key)}, задач: ${tasks.length}"><span>${d.getDate()}</span>${tasks
       .slice(0, 3)
@@ -183,7 +185,7 @@ function renderMonth() {
   $("#selected-date").textContent = dateLabel(selectedDate);
   $("#date-tasks").innerHTML = rows(
     state.items
-      .filter((t) => t.type === "task" && t.date && occurs(t, selectedDate))
+      .filter((t) => t.type === "task" && t.date && occurs(t, selectedDate, state.done))
       .sort((a, b) => (a.time || "").localeCompare(b.time || "")),
     selectedDate,
   );
@@ -195,6 +197,11 @@ document.querySelector("main").addEventListener("change", async (e) => {
   const next = structuredClone(state);
   next.done[completionKey(item, e.target.dataset.date)] = e.target.checked;
   setReward(next,completionKey(item,e.target.dataset.date),e.target.checked,item.coins);
+  if (item.type === "task" && repeatOf(item) === "until") {
+    const stored = next.items.find((i) => i.id === id);
+    if (e.target.checked) stored.doneOn = e.target.dataset.date;
+    else delete stored.doneOn;
+  }
   busy = true;
   render();
   try {
@@ -352,9 +359,13 @@ $("#entity-form").addEventListener("submit", async (e) => {
     if (kind === "task") {
       entry.date = d.get("date") || "";
       entry.time = d.get("time") || "";
-      entry.weekly = d.get("weekly") === "on";
-      if (entry.weekly && !entry.date)
-        error = "Выбери дату первого повторения.";
+      // Задача «один раз» без даты, как и раньше, висит, пока не выполнена.
+      const repeat = d.get("repeat") === "once" && !entry.date ? "until" : d.get("repeat") || "once";
+      entry.weekly = repeat === "weekly";
+      if (repeat !== "once") entry.repeat = repeat;
+      const previous = state.items.find((i) => i.id === entry.id);
+      if (repeat === "until" && previous?.doneOn) entry.doneOn = previous.doneOn;
+      if (repeat === "weekly" && !entry.date) error = "Выбери дату первого повторения.";
     }
     if (!entry.name) error = "Введи название.";
   }
@@ -411,7 +422,7 @@ $("#entity-library").addEventListener("click", async (e) => {
       if (kind === "task") {
         $("#task-date").value = entry.date || "";
         $("#task-time").value = entry.time || "";
-        $("#task-weekly").checked = !!entry.weekly;
+        $("#task-repeat").value = repeatOf(entry);
       }
     }
     $("#save-entity").textContent = "Сохранить";

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#f4f7fb" />
+    <title>dLife — Цели</title>
+    <meta name="description" content="Личное пространство Дениса." />
+    <link rel="icon" type="image/png" sizes="64x64" href="/assets/avatar-icon-64.png" /><link rel="icon" type="image/png" sizes="512x512" href="/assets/avatar-icon.png" /><link rel="apple-touch-icon" href="/assets/avatar-icon-180.png" />
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/now.css" />
+    <link rel="stylesheet" href="/design.css" />
+    <link rel="stylesheet" href="/features.css" />
+    <link rel="stylesheet" href="/extensions.css" />
+    <link rel="stylesheet" href="/theme.css" />
+    <link rel="stylesheet" href="/sphere.css" />
+    <link rel="stylesheet" href="/goals.css" />
+    <script type="module" src="/account.js"></script>
+    <script type="module" src="/goals.js"></script>
+  </head>
+  <body>
+    <div class="workspace">
+      <header class="header">
+        <a class="brand" href="/" aria-label="dLife — главная"><img src="/assets/app-icon.png" alt="" width="48" height="48" /><span>dLife</span></a>
+        <nav aria-label="Основная навигация">
+          <a class="nav-current" href="/">Профиль</a><a href="/now/">Задачи</a><a href="/aspects/">Аспекты</a>
+        </nav>
+        <div class="header-actions">
+          <div class="coin-pill" title="Мои монеты"><img src="/assets/coins.png" alt="" width="30" height="30" /><strong id="coin-balance" aria-label="Баланс монет">0</strong></div>
+        </div>
+      </header>
+
+      <main class="sp gl">
+        <a href="/" class="sp-back">← Профиль</a>
+        <div class="gl-head">
+          <h1>Мои цели</h1>
+          <p>От маленьких желаний до того, кем я хочу стать. Заполняй постепенно — по одному пункту.</p>
+        </div>
+        <p id="sphere-error" class="sp-toast" role="status" aria-live="polite"></p>
+        <div class="gl-tiers" role="group" aria-label="Что показывать" id="goal-tiers"></div>
+        <div class="gl-grid" id="goal-grid"></div>
+      </main>
+    </div>
+  </body>
+</html>

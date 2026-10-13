@@ -113,6 +113,9 @@ export function validateState(state) {
       return false;
     if (i.weekly !== undefined && typeof i.weekly !== "boolean") return false;
     if (i.weekly && !validDate(i.date)) return false;
+    if (i.repeat !== undefined && !["daily", "weekly", "until"].includes(i.repeat)) return false;
+    if (i.repeat === "weekly" && !i.weekly) return false;
+    if (i.doneOn !== undefined && !validDate(i.doneOn)) return false;
     itemIds.add(i.id);
   }
   if (!validateDevelopment(state)) return false;
@@ -120,6 +123,7 @@ export function validateState(state) {
   if(state.items.some(i=>i.coins!==undefined&&!amount(i.coins)))return false;
   if(state.rewards!==undefined&&(!state.rewards||Array.isArray(state.rewards)||typeof state.rewards!=='object'||Object.entries(state.rewards).some(([k,v])=>k.length>200||!amount(v))))return false;
   if(state.steps!==undefined&&(!state.steps||Array.isArray(state.steps)||typeof state.steps!=='object'||Object.entries(state.steps).some(([k,v])=>!validDate(k)||!Number.isInteger(v)||v<0||v>200000)))return false;
+  if(state.goals!==undefined&&(!Array.isArray(state.goals)||state.goals.length>1000||new Set(state.goals.map(g=>g?.id)).size!==state.goals.length||state.goals.some(g=>!g||typeof g.id!=='string'||!g.id||g.id.length>80||!SPHERES.some(s=>s.id===g.sphereId)||!['wish','goal','vision'].includes(g.kind)||typeof g.text!=='string'||!g.text.trim()||g.text.length>300||typeof g.done!=='boolean'||!Number.isInteger(g.year)||g.year<2000||g.year>2100)))return false;
   if(state.calories!==undefined&&(!state.calories||Array.isArray(state.calories)||typeof state.calories!=='object'||Object.entries(state.calories).some(([k,v])=>!validDate(k)||!Number.isInteger(v)||v<0||v>20000)))return false;
   if(state.logs?.some(l=>l.coinRate!==undefined&&!amount(l.coinRate)))return false;
   return Object.entries(state.done).every(

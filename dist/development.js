@@ -12,18 +12,27 @@ export function shiftDate(key, days) {
   d.setDate(d.getDate() + days);
   return dateKey(d);
 }
-export function occurs(item, date) {
-  if (item.type === "habit" || !item.date) return true;
-  if (date < item.date) return false;
-  if (!item.weekly) return date === item.date;
-  const a = new Date(item.date + "T12:00:00");
-  const b = new Date(date + "T12:00:00");
-  return a.getDay() === b.getDay();
+/** Повтор задачи: once — в выбранную дату, daily — каждый день, weekly — раз в неделю,
+    until — каждый день, пока не отмечена (задача без даты ведёт себя так же). */
+export function repeatOf(item) {
+  if (item.repeat) return item.repeat;
+  if (item.weekly) return "weekly";
+  return item.date ? "once" : "until";
+}
+export function occurs(item, date, done) {
+  if (item.type === "habit") return true;
+  const repeat = repeatOf(item);
+  if (item.date && date < item.date) return false;
+  if (repeat === "once") return date === item.date;
+  if (repeat === "daily") return true;
+  if (repeat === "weekly")
+    return new Date(item.date + "T12:00:00").getDay() === new Date(date + "T12:00:00").getDay();
+  // until: висит, пока не выполнена; в день выполнения ещё видна отмеченной, потом исчезает
+  if (!done?.[`task:${item.id}`]) return true;
+  return item.doneOn === date;
 }
 export function completionKey(item, date = dateKey()) {
-  return item.type === "habit" || item.date
-    ? `${date}:${item.id}`
-    : `task:${item.id}`;
+  return item.type === "habit" || repeatOf(item) !== "until" ? `${date}:${item.id}` : `task:${item.id}`;
 }
 export function streak(item, done, date = dateKey()) {
   let day = done[completionKey(item, date)] ? date : shiftDate(date, -1),

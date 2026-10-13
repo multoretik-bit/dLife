@@ -1,5 +1,6 @@
 import {ScheduleStore} from './store.js';
-import {cloudClient,cloudConfig,configureCloud,cloudEnabled,cloudUser,joinSyncCode,codeSyncEnabled,savedSyncCode,disableCodeSync} from './cloud.js';
+import {cloudClient,cloudConfig,configureCloud,cloudEnabled,cloudUser,joinSyncCode,codeSyncEnabled,savedSyncCode,disableCodeSync,dcapitalClient} from './cloud.js';
+import {goalStats} from './goals-model.js';
 import {dateKey,emptyState,validateState} from './schedule.js';
 import {coinTotal,normalize} from './development.js';
 
@@ -31,12 +32,23 @@ $('#sync-code-join')?.addEventListener('click',()=>connectCode($('#sync-code').v
 $('#sync-code-copy')?.addEventListener('click',async()=>{const code=$('#sync-code').value.trim();if(!code)return $('#sync-code-status').textContent='Сначала создай или введи код.';try{await navigator.clipboard.writeText(code);$('#sync-code-status').textContent='Код скопирован.';}catch{$('#sync-code-status').textContent='Код: '+code;}});
 $('#sync-code-disable')?.addEventListener('click',()=>{disableCodeSync();$('#sync-code-status').textContent='Синхронизация отключена только на этом устройстве.';setTimeout(()=>location.reload(),500);});
 
+function plural(n, one, few, many) {
+  const m10 = n % 10, m100 = n % 100;
+  return m10 === 1 && m100 !== 11 ? one : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? few : many;
+}
+
 function render() {
   if (!state) return;
-  $('#steps-value').textContent = new Intl.NumberFormat('ru-RU').format(state.steps[dateKey()] || 0);
-  $('#steps-input').value = state.steps[dateKey()] || '';
   $('#useful-value').textContent = state.logs.filter(l => l.date === dateKey()).reduce((n, l) => n + l.minutes, 0) + ' мин';
   $('#coin-balance').textContent = new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(coinTotal(state));
+  const g = goalStats(state);
+  if (!g.total) {
+    $('#goals-value').textContent = '—';
+    $('#goals-status').textContent = 'Начни с маленького желания в любом аспекте';
+  } else {
+    $('#goals-value').innerHTML = `${g.wish.done + g.goal.done} <small>из ${g.wish.total + g.goal.total} выполнено</small>`;
+    $('#goals-status').textContent = `✨ ${g.wish.total} ${plural(g.wish.total, 'желание', 'желания', 'желаний')} · 🎯 ${g.goal.total} ${plural(g.goal.total, 'цель', 'цели', 'целей')} · 🔭 ${g.vision.total} в видении`;
+  }
 }
 
 try {
@@ -45,23 +57,6 @@ try {
 } catch (e) {
   $('#home-status').textContent = e.message;
 }
-
-$('#steps-form')?.addEventListener('submit', async e => {
-  e.preventDefault();
-  if (!state || busy) return;
-  busy = true;
-  try {
-    const next = structuredClone(state);
-    next.steps[dateKey()] = Number($('#steps-input').value);
-    state = normalize(await store.save(next));
-    render();
-    $('#home-status').textContent = 'Шаги сохранены';
-  } catch (e) {
-    $('#home-status').textContent = e.message;
-  } finally {
-    busy = false;
-  }
-});
 
 $('#export-data')?.addEventListener('click', async () => {
   try {
@@ -123,7 +118,7 @@ $('#cloud-login')?.addEventListener('submit', async e => {
       syncMessage = ' Код синхронизации нужно подключить повторно: ' + syncError.message;
     }
   }
-  $('#cloud-status').textContent = 'Вход выполнен! Капитал подключён.' + syncMessage;
+  $('#cloud-status').textContent = 'Вход выполнен.' + syncMessage;
   setTimeout(() => {
     $('#cloud-dialog')?.close();
   }, 1000);
@@ -155,7 +150,7 @@ $('#cloud-migrate')?.addEventListener('click', async () => {
 
 $('#cloud-logout')?.addEventListener('click', async () => {
   await cloudClient()?.auth.signOut();
-  $('#cloud-status').textContent = 'Выход выполнен. Для чтения капитала dMoney войди снова.';
+  $('#cloud-status').textContent = 'Выход из аккаунта синхронизации выполнен.';
   await capital();
 });
 
@@ -179,56 +174,61 @@ async function exchangeRates(baseCurrency = 'USD') {
 }
 
 async function capital() {
-  const user = await cloudUser();
+  const c = dcapitalClient(), {data: {user}} = await c.auth.getUser().catch(() => ({data: {user: null}}));
   if (!user) {
     $('#capital-value').textContent = '—';
-    $('#capital-status').textContent = 'Войди в аккаунт dMoney для показа капитала';
-    $('#capital-refresh').textContent = 'Подключить dMoney';
+    $('#capital-status').textContent = 'Войди в dCapital, чтобы видеть капитал';
+    $('#capital-refresh').textContent = 'Войти в dCapital';
     return;
   }
-
-  $('#capital-refresh').textContent = 'Обновить dMoney ↗';
-  $('#capital-status').textContent = 'Загружаем кошельки dMoney…';
+  $('#capital-refresh').textContent = 'Обновить';
+  $('#capital-status').textContent = 'Загружаю счета dCapital…';
   try {
-    const c = cloudClient();
-    const [walletResult, prefsResult] = await Promise.all([
+    const [walletResult, assetResult, prefsResult] = await Promise.all([
       c.from('wallets').select('balance,currency'),
-      c.from('user_preferences').select('base_currency').eq('user_id', user.id).maybeSingle()
+      c.from('assets').select('estimated_value,currency'),
+      c.from('user_preferences').select('base_currency').eq('user_id', user.id).maybeSingle(),
     ]);
-
     if (walletResult.error) throw walletResult.error;
-    const wallets = walletResult.data || [];
-    if (!wallets.length) {
-      $('#capital-value').textContent = '0';
-      $('#capital-status').textContent = 'В этом аккаунте нет кошельков dMoney';
-      return;
-    }
-
-    const baseCurrency = prefsResult.data?.base_currency || 'USD';
-    const rates = await exchangeRates(baseCurrency);
-
-    const total = wallets.reduce((sum, w) => {
-      const amount = Number(w.balance || 0);
-      const curr = w.currency || baseCurrency;
-      const rate = curr === baseCurrency ? 1 : Number(rates[curr]);
-      return sum + (Number.isFinite(rate) && rate > 0 ? amount / rate : 0);
-    }, 0);
-
-    const formatted = new Intl.NumberFormat('ru-RU', {maximumFractionDigits: 0}).format(Math.round(total));
-    $('#capital-value').textContent = `${formatted} ${baseCurrency}`;
-    const count = wallets.length;
-    const countWord = count === 1 ? 'счёт' : count < 5 ? 'счёта' : 'счетов';
-    const timeStr = new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'});
-    $('#capital-status').textContent = `${count} ${countWord} · dMoney · ${timeStr}`;
+    const wallets = walletResult.data || [], assets = assetResult.error ? [] : assetResult.data || [];
+    const base = prefsResult.data?.base_currency || 'USD', rates = await exchangeRates(base);
+    const inBase = (amount, currency) => {
+      const rate = !currency || currency === base ? 1 : Number(rates[currency]);
+      return Number.isFinite(rate) && rate > 0 ? Number(amount || 0) / rate : 0;
+    };
+    const money = wallets.reduce((sum, w) => sum + inBase(w.balance, w.currency), 0);
+    const property = assets.reduce((sum, a) => sum + inBase(a.estimated_value, a.currency), 0);
+    const fmt = n => new Intl.NumberFormat('ru-RU', {maximumFractionDigits: 0}).format(Math.round(n));
+    $('#capital-value').textContent = `${fmt(money)} ${base}`;
+    const time = new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'});
+    $('#capital-status').textContent = `${wallets.length} ${plural(wallets.length, 'счёт', 'счёта', 'счетов')}${property ? ` · имущество ≈ ${fmt(property)} ${base}` : ''} · обновлено в ${time}`;
   } catch (e) {
-    $('#capital-status').textContent = 'Не удалось прочитать dMoney: ' + e.message;
+    $('#capital-status').textContent = 'Не удалось прочитать dCapital: ' + e.message;
   }
 }
 
+$('#dcapital-login')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  $('#dcapital-status').textContent = 'Вхожу в dCapital…';
+  const {error} = await dcapitalClient().auth.signInWithPassword({email: $('#dcapital-email').value.trim(), password: $('#dcapital-password').value});
+  $('#dcapital-password').value = '';
+  if (error) { $('#dcapital-status').textContent = 'Не получилось войти: ' + error.message; return; }
+  $('#dcapital-status').textContent = 'Готово! Капитал подключён.';
+  setTimeout(() => $('#dcapital-dialog')?.close(), 700);
+  await capital();
+});
+
+$('#dcapital-logout')?.addEventListener('click', async () => {
+  await dcapitalClient().auth.signOut();
+  $('#dcapital-status').textContent = 'Вышел из dCapital на этом устройстве.';
+  await capital();
+});
+
 $('#capital-refresh')?.addEventListener('click', async () => {
-  const user = await cloudUser();
+  const {data: {user}} = await dcapitalClient().auth.getUser().catch(() => ({data: {user: null}}));
   if (!user) {
-    openCloudDialog();
+    $('#dcapital-status').textContent = '';
+    $('#dcapital-dialog')?.showModal();
     return;
   }
   await capital();

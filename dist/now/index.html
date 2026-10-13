@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#f4f7fb" />
     <title>dLife — Задачи</title>
-    <link rel="icon" type="image/png" href="/assets/app-icon.png" /><link rel="apple-touch-icon" href="/assets/app-icon.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/assets/avatar-icon-64.png" /><link rel="icon" type="image/png" sizes="512x512" href="/assets/avatar-icon.png" /><link rel="apple-touch-icon" href="/assets/avatar-icon-180.png" />
     <link rel="stylesheet" href="/style.css" />
     <link rel="stylesheet" href="/now.css" />
     <link rel="stylesheet" href="/design.css" />
@@ -229,10 +229,16 @@
                   ><input type="time" id="task-time" name="time" />
                 </div>
               </div>
-              <label class="weekly-label"
-                ><input type="checkbox" id="task-weekly" name="weekly" />
-                Повторять каждую неделю</label
-              >
+              <div class="repeat-field">
+                <label for="task-repeat">Повтор</label>
+                <select id="task-repeat" name="repeat">
+                  <option value="once">Один раз — в выбранную дату</option>
+                  <option value="daily">Каждый день</option>
+                  <option value="weekly">Каждую неделю</option>
+                  <option value="until">Пока не выполню — не исчезнет до отметки</option>
+                </select>
+                <p class="field-hint">Для «каждый день» и «пока не выполню» дата — с какого дня начать (можно не указывать).</p>
+              </div>
             </div>
             <p id="habit-explainer" hidden class="field-hint">
               21 день подряд — привычка внедрена. Пропущенный день обнуляет
