@@ -1,4 +1,5 @@
 // Система целей: маленькие желания, цели на текущий год и видение на следующий.
+export const GOAL_TEXT_MAX = 2000;
 export const goalYear = (now = new Date()) => now.getFullYear();
 export const visionYear = (now = new Date()) => now.getFullYear() + 1;
 
@@ -20,7 +21,7 @@ export function goalList(state) {
       .split(/\n+/)
       .map((line) => line.trim())
       .filter(Boolean)
-      .forEach((line, i) => list.push({ id: `vision-${sphereId}-${i}`, sphereId, kind: 'vision', text: line.slice(0, 300), done: false, year: visionYear() }));
+      .forEach((line, i) => list.push({ id: `vision-${sphereId}-${i}`, sphereId, kind: 'vision', text: line.slice(0, GOAL_TEXT_MAX), done: false, year: visionYear() }));
   }
   return list;
 }

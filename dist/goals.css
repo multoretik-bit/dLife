@@ -40,6 +40,95 @@
 .gl-plus { min-height: 34px; padding: 4px 12px; border: 1px dashed var(--line); border-radius: 999px; background: transparent; color: var(--ink-2); font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.2s, border-color 0.2s, color 0.2s; }
 .gl-plus:hover { border-color: var(--accent); color: var(--ink); background: var(--soft); }
 
+.gl [hidden] { display: none !important; }
+.gl-open { display: inline-grid; place-items: center; width: 26px; height: 26px; margin-left: 2px; border-radius: 50%; color: var(--muted); transition: background 0.2s, color 0.2s, transform 0.2s; }
+.gl-open svg { width: 15px; height: 15px; }
+.gl-card-head a:hover .gl-open { background: var(--soft); color: var(--ink); transform: translate(1px, -1px); }
+/* Длинные тексты в сетке — до 4 строк, целиком на странице аспекта */
+.gl-item > span { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
+.gl-edit { display: grid; flex: 1; gap: 8px; }
+.gl-edit textarea { width: 100%; box-sizing: border-box; border-radius: 14px; background: #fff; font-size: 15px; line-height: 1.5; }
+.gl-edit div { display: flex; gap: 6px; }
+
+/* ---------- Страница одного аспекта ---------- */
+.gd { display: grid; gap: 18px; }
+.gd-hero { position: relative; overflow: hidden; isolation: isolate; padding: 22px 28px 26px; border-radius: var(--radius-lg); color: var(--ink); background: radial-gradient(520px 260px at 100% 0%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 70%), radial-gradient(420px 240px at 0% 100%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%), var(--card); border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--line)); box-shadow: var(--shadow); }
+.gd-hero-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.gd-sphere-link { color: var(--ink-2); font-size: 14px; font-weight: 700; text-decoration: none; }
+.gd-sphere-link:hover { color: var(--blue-deep); }
+.gd-title { display: flex; align-items: center; gap: 14px; margin: 14px 0 10px; }
+.gd-title h1 { margin: 0; font-size: clamp(34px, 5vw, 52px); font-weight: 800; letter-spacing: -1.6px; }
+.gd-dot { width: 24px; height: 24px; border-radius: 8px; background: var(--accent); box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 45%, transparent); }
+.gd-stats { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.gd-stats span { padding: 6px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.75); color: var(--ink-2); font-size: 13.5px; font-weight: 700; }
+.gd-nav { display: flex; justify-content: space-between; gap: 10px; margin-top: 18px; }
+.gd-nav a { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.7); color: var(--ink-2); font-size: 13.5px; font-weight: 700; text-decoration: none; border: 1px solid var(--line); }
+.gd-nav a::before { content: ""; width: 8px; height: 8px; border-radius: 3px; background: var(--c); }
+.gd-nav a:last-child::before { order: 2; }
+.gd-nav a:hover { background: #fff; color: var(--ink); }
+
+.gd-block { padding: 24px 28px 26px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--card); box-shadow: var(--shadow); }
+.gd-block-head { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.gd-block-head h2 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+.gd-block-head p { margin: 2px 0 0; color: var(--muted); font-size: 13.5px; font-weight: 600; }
+.gd-block-head b { margin-left: auto; padding: 4px 12px; border-radius: 999px; background: var(--soft); font-size: 14px; }
+.gd-ico { display: grid; place-items: center; flex: none; width: 46px; height: 46px; border-radius: 14px; font-size: 22px; background: var(--soft); }
+.gd-empty { margin: 0 0 4px; padding: 18px; border: 1px dashed var(--line); border-radius: 16px; color: var(--muted); font-size: 14.5px; list-style: none; text-align: center; }
+.gd-actions { display: inline-flex; flex: none; }
+.gd-add { display: flex; align-items: flex-end; gap: 8px; margin-top: 16px; }
+.gd-add input, .gd-add textarea { flex: 1; min-width: 0; width: auto; border-radius: 16px; background: var(--soft); padding: 12px 16px; font-size: 15px; line-height: 1.5; }
+.gd-add input { border-radius: 999px; }
+
+/* Видение — большие цитаты в цвете аспекта */
+.gd-block.gd-b-vision { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 7%, #fff), #fff 60%); }
+.gd-block.gd-b-vision .gd-ico { background: #f3edff; }
+.gd-visions { display: grid; gap: 14px; }
+.gd-visions .gd-vision { position: relative; margin: 0; padding: 22px 24px 14px 30px; border-radius: 20px; background: #fff; border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line)); box-shadow: 0 1px 2px rgba(15, 42, 64, 0.04); }
+.gd-visions .gd-vision::before { content: ""; position: absolute; left: 0; top: 18px; bottom: 18px; width: 5px; border-radius: 0 5px 5px 0; background: var(--accent); }
+.gd-vision blockquote { margin: 0; font-size: clamp(17px, 2vw, 20px); line-height: 1.55; font-weight: 600; color: var(--ink); white-space: pre-line; overflow-wrap: anywhere; }
+.gd-vision blockquote::before { content: "\201C"; display: block; height: 22px; margin-bottom: 4px; color: color-mix(in srgb, var(--accent) 70%, var(--ink)); font-family: Georgia, serif; font-size: 52px; line-height: 0.9; opacity: 0.5; }
+.gd-vision figcaption { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
+.gd-came-true { min-height: 34px; padding: 4px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--soft); color: var(--ink-2); font-size: 13px; font-weight: 700; cursor: pointer; }
+.gd-came-true:hover { border-color: #8a63d2; color: #5b3aa6; }
+.gd-visions .gd-vision.is-done { border-color: #c9b6ef; background: linear-gradient(135deg, #f6f0ff, #fff); }
+.gd-vision.is-done .gd-came-true { background: #8a63d2; border-color: #8a63d2; color: #fff; }
+.gd-visions .sp-icon, .gd-goal .sp-icon, .gd-chip .sp-icon { opacity: 0.55; }
+.gd-visions .gd-vision:hover .sp-icon, .gd-goal:hover .sp-icon, .gd-chip:hover .sp-icon { opacity: 1; }
+
+/* Цели — карточки с прогрессом */
+.gd-block.gd-b-goal { background: var(--card); }
+.gd-block.gd-b-goal .gd-ico { background: #eaf1ff; }
+.gd-progress { display: grid; gap: 8px; margin: -4px 0 16px; }
+.gd-progress i { display: block; height: 8px; border-radius: 999px; background: rgba(15, 42, 64, 0.07); overflow: hidden; }
+.gd-progress em { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #3a6dff, #2fa58c); transition: width 0.6s var(--ease); }
+.gd-progress span { color: var(--muted); font-size: 13px; font-weight: 700; }
+.gd-goals { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.gd-goals .gd-empty { grid-column: 1 / -1; }
+.gd-goals .gd-goal { display: flex; align-items: flex-start; gap: 12px; padding: 16px 12px 16px 16px; border-radius: 18px; border: 1px solid var(--line); background: linear-gradient(160deg, #f5f8ff, #fff 70%); transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease); }
+.gd-goals .gd-goal:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.gd-goal p { flex: 1; min-width: 0; margin: 2px 0 0; font-size: 15.5px; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; white-space: pre-line; }
+.gd-goal .gd-actions { flex-direction: column; margin: -6px -4px 0 0; }
+.gd-goals .gd-goal.is-done { background: #f3fbf8; border-color: #cfeee5; }
+.gd-goal.is-done p { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(47, 165, 140, 0.6); }
+.gd-goal.is-done .sp-check { background: #2fa58c; border-color: #2fa58c; color: #fff; }
+.gd-goals .gd-goal.is-editing { display: block; }
+
+/* Желания — «таблетки» */
+.gd-block.gd-b-wish .gd-ico { background: #fff0f6; }
+.gd-chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.gd-chips .gd-empty { flex: 1; }
+.gd-chip { display: inline-flex; align-items: center; max-width: 100%; padding: 4px; border: 1px solid #f6cfe0; border-radius: 999px; background: #fff7fb; transition: background 0.2s, border-color 0.2s, transform 0.15s; }
+.gd-chip:hover { transform: translateY(-1px); }
+.gd-chip > button:first-child { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 4px 10px 4px 4px; border: 0; background: none; color: var(--ink); font: inherit; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.gd-chip i { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #f0b6cf; background: #fff; color: transparent; }
+.gd-chip i svg { width: 15px; height: 15px; stroke-width: 3; }
+.gd-chip .sp-icon { width: 30px; height: 30px; }
+.gd-chip.is-done { background: #e0679a; border-color: #e0679a; }
+.gd-chip.is-done > button:first-child { color: #fff; }
+.gd-chip.is-done i { background: #fff; border-color: #fff; color: #e0679a; }
+.gd-chip.is-done .sp-icon { color: rgba(255, 255, 255, 0.85); }
+.gd-chip-edit { flex: 1 1 100%; list-style: none; }
+
 /* Главная: действия в карточках */
 .stat-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
 .goals-card strong small, .capital-card strong small { margin-left: 4px; font-size: 0.45em; color: var(--muted); font-weight: 700; letter-spacing: 0; word-spacing: normal; }
@@ -48,6 +137,10 @@
   .gl-tiers { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 760px) {
+  .gd-hero, .gd-block { padding: 18px 16px 20px; }
+  .gd-nav a { font-size: 12.5px; padding: 7px 10px; }
+  .gd-add { flex-direction: column; align-items: stretch; }
+  .gd-goals { grid-template-columns: 1fr; }
   .gl-grid { grid-template-columns: 1fr; }
   .gl-card { padding: 18px 16px; }
   .gl-tier { padding: 14px; }
