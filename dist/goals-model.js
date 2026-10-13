@@ -1,4 +1,4 @@
-// Система целей: маленькие желания, цели на текущий год и видение на следующий.
+// Система целей: маленькие желания, цели на текущий год и видение — идеальная картина будущего на несколько лет.
 export const GOAL_TEXT_MAX = 2000;
 export const goalYear = (now = new Date()) => now.getFullYear();
 export const visionYear = (now = new Date()) => now.getFullYear() + 1;
@@ -6,7 +6,7 @@ export const visionYear = (now = new Date()) => now.getFullYear() + 1;
 export const KINDS = [
   { id: 'wish', icon: '✨', title: 'Маленькие желания', hint: 'Легко внедрить — сделать на этой неделе', add: 'Новое желание' },
   { id: 'goal', icon: '🎯', title: () => `Цели до конца ${goalYear()}`, hint: 'Конкретный результат к концу года', add: 'Новая цель' },
-  { id: 'vision', icon: '🔭', title: () => `Видение до конца ${visionYear()}`, hint: 'Кем я хочу стать через пару лет', add: 'Каким я хочу стать' },
+  { id: 'vision', icon: '🔭', title: 'Видение на несколько лет', hint: 'Моя идеальная картинка будущего', add: 'Каким я хочу стать' },
 ];
 export const kindTitle = (k) => (typeof k.title === 'function' ? k.title() : k.title);
 
@@ -26,12 +26,13 @@ export function goalList(state) {
   return list;
 }
 
-/** Копия состояния с изменённым списком целей; старые цели аспектов переносятся один раз. */
+/** Копия состояния с изменённым списком целей и групп желаний (change(goals, groups)); старые цели аспектов переносятся один раз. */
 export function changeGoals(state, change) {
   const next = structuredClone(state);
   next.goals = structuredClone(goalList(state));
+  next.wishGroups = structuredClone(state.wishGroups || []);
   for (const plan of Object.values(next.spherePlans || {})) delete plan.goals;
-  change(next.goals);
+  change(next.goals, next.wishGroups);
   return next;
 }
 

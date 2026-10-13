@@ -53,3 +53,47 @@ test('goals collect old sphere goals and vision text once, then live in state.go
   assert.deepEqual(goalStats(next).goal, { total: 1, done: 1 });
   assert.equal(validateState({ ...next, goals: [{ id: 'x', sphereId: '10', kind: 'dream', text: 'a', done: false, year: 2026 }] }), false);
 });
+
+test('wish groups are validated and deleting a group keeps its wishes', () => {
+  const base = { ...emptyState(), goals: [{ id: 'w1', sphereId: '2', kind: 'wish', text: 'Стакан воды', done: false, year: 2026, groupId: 'g1' }], wishGroups: [{ id: 'g1', sphereId: '2', name: 'Утро' }] };
+  assert.ok(validateState(base));
+  assert.equal(validateState({ ...base, wishGroups: [{ id: 'g1', sphereId: '2', name: '  ' }] }), false);
+  assert.equal(validateState({ ...base, wishGroups: [{ id: 'g1', sphereId: '99', name: 'Утро' }] }), false);
+  assert.equal(validateState({ ...base, wishGroups: [{ id: 'g1', sphereId: '2', name: 'А' }, { id: 'g1', sphereId: '2', name: 'Б' }] }), false);
+  assert.equal(validateState({ ...base, goals: [{ ...base.goals[0], groupId: 5 }] }), false);
+  const next = changeGoals(base, (list, groups) => {
+    groups.splice(0, 1);
+    for (const g of list) if (g.groupId === 'g1') delete g.groupId;
+  });
+  assert.ok(validateState(next));
+  assert.deepEqual(next.wishGroups, []);
+  assert.equal(next.goals.length, 1);
+  assert.equal(next.goals[0].groupId, undefined);
+  assert.equal(changeGoals(emptyState(), () => {}).wishGroups.length, 0);
+});
+
+test('calorie periods: week is Monday-Sunday, month is calendar, future days are not counted', async () => {
+  const { periodDays, periodSummary, CALORIE_GOAL } = await import('../dist/health.js');
+  const { dateKey } = await import('../dist/schedule.js');
+  const wed = new Date(2026, 9, 14, 15, 30); // среда, 14 октября 2026
+  const week = periodDays('week', 0, wed);
+  assert.deepEqual([dateKey(week[0]), dateKey(week[6])], ['2026-10-12', '2026-10-18']);
+  assert.deepEqual([dateKey(periodDays('week', -1, wed)[0])], ['2026-10-05']);
+  const month = periodDays('month', 0, wed);
+  assert.equal(month.length, 31);
+  assert.deepEqual([dateKey(month[0]), dateKey(month[30])], ['2026-10-01', '2026-10-31']);
+  assert.equal(periodDays('month', -8, wed).length, 28); // февраль 2026
+  assert.equal(periodDays('month', 3, wed)[0].getMonth(), 0); // январь 2027
+  const calories = { '2026-10-12': 300, '2026-10-13': 100, '2026-10-14': 250, '2026-10-16': 900, '2026-10-05': 40 };
+  const s = periodSummary(calories, week, '2026-10-14');
+  assert.equal(s.total, 650); // 16-е ещё в будущем — не считается
+  assert.equal(s.goldDays, 2);
+  assert.equal(s.elapsed, 3);
+  assert.equal(s.best, 300);
+  assert.equal(Math.round(s.avg), 217);
+  assert.equal(s.target, 7 * CALORIE_GOAL);
+  assert.equal(s.gold, false);
+  const full = periodSummary({ '2026-10-12': 2000 }, week, '2026-10-18');
+  assert.equal(full.gold, true);
+  assert.equal(periodSummary(undefined, month, '2026-10-14').total, 0);
+});

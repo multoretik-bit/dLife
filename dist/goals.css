@@ -129,6 +129,31 @@
 .gd-chip.is-done .sp-icon { color: rgba(255, 255, 255, 0.85); }
 .gd-chip-edit { flex: 1 1 100%; list-style: none; }
 
+/* Группы маленьких желаний */
+.gl-tag { flex: none; align-self: center; max-width: 40%; padding: 2px 9px; border-radius: 999px; background: #fff0f6; color: #b3417a; font-size: 11.5px; font-style: normal; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gd-group-tools { margin-bottom: 14px; }
+.gd-group-add { min-height: 38px; padding: 6px 16px; border: 1.5px dashed #f0b6cf; border-radius: 999px; background: transparent; color: #b3417a; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.2s, border-color 0.2s; }
+.gd-group-add:hover { background: #fff0f6; border-color: #e0679a; }
+.gd-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; margin-bottom: 14px; align-items: start; }
+.gd-group { padding: 14px 16px 16px; border: 1px solid #f6cfe0; border-radius: 20px; background: linear-gradient(170deg, #fff4f9, #fff 65%); }
+.gd-group-head { display: flex; align-items: center; gap: 8px; }
+.gd-group-head h3 { flex: 1; min-width: 0; margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -0.2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gd-group-head small { padding: 2px 10px; border-radius: 999px; background: #fff; color: #b3417a; font-size: 12.5px; font-weight: 800; }
+.gd-group-toggle { display: grid; place-items: center; flex: none; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; background: #fff; color: #b3417a; cursor: pointer; transition: transform 0.2s var(--ease); }
+.gd-group-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.gd-group.is-collapsed .gd-group-toggle { transform: rotate(-90deg); }
+.gd-group.is-collapsed .gd-group-body { display: none; }
+.gd-group-body { margin-top: 12px; }
+.gd-group .gd-chips { gap: 8px; }
+.gd-group .gd-empty { padding: 12px; font-size: 13.5px; }
+.gd-add-mini { margin-top: 10px; }
+.gd-add-mini input { padding: 9px 14px; font-size: 14px; }
+.gd-add-mini .sp-primary { width: 40px; min-height: 40px; padding: 0; font-size: 18px; }
+.gd-group-form { display: flex; flex: 1; flex-wrap: wrap; gap: 6px; }
+.gd-group-form input { flex: 1 1 160px; min-width: 0; width: auto; border-radius: 999px; background: #fff; padding: 9px 16px; }
+.gd-loose { margin: 4px 0 10px; color: var(--muted); font-size: 12.5px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; }
+.gl-edit select { width: 100%; border-radius: 999px; background: #fff; padding: 9px 14px; }
+
 /* Главная: действия в карточках */
 .stat-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
 .goals-card strong small, .capital-card strong small { margin-left: 4px; font-size: 0.45em; color: var(--muted); font-weight: 700; letter-spacing: 0; word-spacing: normal; }
@@ -140,7 +165,9 @@
   .gd-hero, .gd-block { padding: 18px 16px 20px; }
   .gd-nav a { font-size: 12.5px; padding: 7px 10px; }
   .gd-add { flex-direction: column; align-items: stretch; }
+  .gd-add.gd-add-mini { flex-direction: row; align-items: center; }
   .gd-goals { grid-template-columns: 1fr; }
+  .gd-groups { grid-template-columns: 1fr; }
   .gl-grid { grid-template-columns: 1fr; }
   .gl-card { padding: 18px 16px; }
   .gl-tier { padding: 14px; }

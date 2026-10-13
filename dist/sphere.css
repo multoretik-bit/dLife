@@ -255,6 +255,38 @@ a.sp-primary, a.lib-start { text-decoration: none; }
 .hp-day span { color: var(--muted); font-size: 11.5px; font-weight: 700; }
 .hp-day.is-today span { color: var(--ink); }
 
+/* Сумма калорий за неделю и месяц */
+.hp-periods { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--line); }
+.hp-period { display: grid; align-content: start; gap: 10px; min-width: 0; padding: 18px 20px; border: 1px solid var(--line); border-radius: 20px; background: var(--soft); transition: background 0.4s, border-color 0.4s; }
+.hp-period.is-gold { border-color: #f3d57a; background: linear-gradient(160deg, #fff7dc, #fff 70%); }
+.hp-period header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hp-period header > span { color: var(--muted); font-size: 12.5px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; }
+.hp-nav { display: flex; align-items: center; gap: 2px; }
+.hp-nav b { min-width: 104px; text-align: center; font-size: 14px; font-weight: 800; }
+.hp-nav button { width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; background: #fff; color: var(--ink); font-size: 19px; line-height: 1; cursor: pointer; transition: background 0.2s; }
+.hp-nav button:hover:not(:disabled) { background: var(--blue-soft); }
+.hp-nav button:disabled { opacity: 0.35; cursor: default; }
+.hp-period > strong { font-size: 40px; font-weight: 800; line-height: 1; letter-spacing: -1.4px; font-variant-numeric: tabular-nums; }
+.hp-period.is-gold > strong { background: linear-gradient(135deg, #f7c531, #d98600); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hp-period > strong small { color: var(--muted); font-size: 15px; font-weight: 700; letter-spacing: 0; -webkit-text-fill-color: var(--muted); }
+.hp-meter { display: grid; gap: 5px; }
+.hp-meter i { display: block; height: 8px; border-radius: 999px; background: rgba(15, 42, 64, 0.07); overflow: hidden; }
+.hp-meter em { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #3a9bff, #1101ff); transition: width 0.7s var(--ease); }
+.hp-period.is-gold .hp-meter em { background: linear-gradient(90deg, #ffe27a, #f5b90b, #e08a00); }
+.hp-meter span { color: var(--muted); font-size: 12.5px; font-weight: 700; }
+.hp-bars { position: relative; display: flex; align-items: flex-end; gap: 4px; height: 84px; margin-top: 4px; }
+.hp-bars::before { content: ""; position: absolute; left: 0; right: 0; bottom: var(--line); border-top: 1px dashed rgba(15, 42, 64, 0.22); pointer-events: none; }
+.hp-bars i { flex: 1; min-width: 0; height: var(--h); border-radius: 5px 5px 2px 2px; background: #3a6dff; opacity: 0.85; transition: height 0.5s var(--ease); }
+.hp-bars i.is-empty { background: rgba(15, 42, 64, 0.12); opacity: 1; }
+.hp-bars i.is-future { background: transparent; border: 1px dashed rgba(15, 42, 64, 0.15); opacity: 1; }
+.hp-bars i.is-gold { background: linear-gradient(180deg, #ffe27a, #f5b90b); opacity: 1; box-shadow: 0 0 8px rgba(245, 185, 11, 0.5); }
+.hp-bars i.is-today { outline: 2px solid var(--ink); outline-offset: 1px; }
+.hp-bars-month { gap: 2px; }
+.hp-bar-labels { display: flex; gap: 4px; margin-top: -4px; }
+.hp-bar-labels span { flex: 1; text-align: center; color: var(--muted); font-size: 11.5px; font-weight: 700; }
+.hp-period p { margin: 0; color: var(--ink-2); font-size: 13.5px; line-height: 1.5; }
+.hp-period p b { color: var(--ink); }
+
 /* ---------- Встраивание ---------- */
 .embedded .sp-back, .embedded .sp-head { display: none; }
 .embedded .sp { padding: 0; gap: 14px; }
@@ -263,6 +295,8 @@ a.sp-primary, a.lib-start { text-decoration: none; }
 @media (hover: none) { .sp-icon { opacity: 1; } }
 @media (max-width: 760px) {
   .hp-body { flex-direction: column; gap: 18px; }
+  .hp-periods { grid-template-columns: 1fr; }
+  .hp-period > strong { font-size: 34px; }
   .hp-ring { width: 200px; height: 200px; }
   .hp-side { width: 100%; }
   .hp-chip { flex: 1; }

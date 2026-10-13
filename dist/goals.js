@@ -13,7 +13,8 @@ const icon = {
 };
 // ?sphere=ID открывает отдельную страницу аспекта, без него — сетка всех аспектов.
 const focus = SPHERES.find((s) => s.id === new URLSearchParams(location.search).get("sphere"));
-let state = null, busy = false, filter = "all", editing = null, adding = null, toastTimer;
+let state = null, busy = false, filter = "all", editing = null, adding = null, groupEditing = null, groupAdding = false, toastTimer;
+const collapsed = new Set();
 
 function message(text, sticky = false) {
   clearTimeout(toastTimer);
@@ -38,9 +39,15 @@ async function update(change) {
   }
 }
 
+const groupsOf = (sphereId) => (state.wishGroups || []).filter((x) => x.sphereId === sphereId);
+const groupName = (id) => (state.wishGroups || []).find((x) => x.id === id)?.name;
 const sorted = (list) => [...list].sort((a, b) => a.done - b.done);
 const actions = (g) => `<button type="button" class="sp-icon" data-edit="${esc(g.id)}" aria-label="Изменить">${icon.edit}</button><button type="button" class="sp-icon sp-danger" data-remove="${esc(g.id)}" aria-label="Удалить">${icon.remove}</button>`;
-const editForm = (g, rows = 3) => `<form class="gl-edit" data-edit-form="${esc(g.id)}"><textarea name="text" rows="${rows}" maxlength="${GOAL_TEXT_MAX}" required aria-label="Текст">${esc(g.text)}</textarea><div><button class="sp-primary">Сохранить</button><button type="button" class="sp-ghost" data-cancel>Отмена</button></div></form>`;
+const groupSelect = (g) => {
+  const groups = g.kind === "wish" ? groupsOf(g.sphereId) : [];
+  return groups.length ? `<select name="group" aria-label="Группа"><option value="">Без группы</option>${groups.map((x) => `<option value="${esc(x.id)}"${g.groupId === x.id ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select>` : "";
+};
+const editForm = (g, rows = 3) => `<form class="gl-edit" data-edit-form="${esc(g.id)}"><textarea name="text" rows="${rows}" maxlength="${GOAL_TEXT_MAX}" required aria-label="Текст">${esc(g.text)}</textarea>${groupSelect(g)}<div><button class="sp-primary">Сохранить</button><button type="button" class="sp-ghost" data-cancel>Отмена</button></div></form>`;
 
 /* ---------- Сетка всех аспектов ---------- */
 function renderTiers() {
@@ -56,7 +63,7 @@ function itemRow(g) {
   if (editing === g.id) return `<li class="sp-row gl-item is-editing">${editForm(g)}</li>`;
   return `<li class="sp-row sp-goal gl-item${g.done ? " is-done" : ""}">
       <button type="button" class="sp-check" data-toggle="${esc(g.id)}" role="checkbox" aria-checked="${g.done}" aria-label="${esc(g.text)}">${icon.check}</button>
-      <span>${esc(g.text)}</span>${actions(g)}</li>`;
+      <span>${esc(g.text)}</span>${g.groupId && groupName(g.groupId) ? `<em class="gl-tag">${esc(groupName(g.groupId))}</em>` : ""}${actions(g)}</li>`;
 }
 
 function group(sphereId, kind, items, single) {
@@ -80,7 +87,7 @@ function renderGrid() {
     return `<article class="sp-card gl-card" style="--accent:${sphere.color}">
         <header class="gl-card-head"><a href="/goals/?sphere=${sphere.id}" title="Открыть ${esc(sphere.name)} на всю страницу"><span class="sp-dot" style="background:${sphere.color}"></span>${esc(sphere.name)}<i class="gl-open">${icon.open}</i></a>${items.length ? `<small>${done}/${items.length}</small>` : ""}</header>
         ${kinds.map((k) => group(sphere.id, k, items, single)).join("")}
-        ${missing.length ? `<div class="gl-quick">${missing.map((k) => `<button type="button" class="gl-plus" data-add="${sphere.id}:${k.id}">＋ ${k.icon} ${k.id === "wish" ? "желание" : k.id === "goal" ? `цель ${goalYear()}` : `видение ${visionYear()}`}</button>`).join("")}</div>` : ""}
+        ${missing.length ? `<div class="gl-quick">${missing.map((k) => `<button type="button" class="gl-plus" data-add="${sphere.id}:${k.id}">＋ ${k.icon} ${k.id === "wish" ? "желание" : k.id === "goal" ? `цель ${goalYear()}` : "видение"}</button>`).join("")}</div>` : ""}
       </article>`;
   }).join("");
 }
@@ -107,8 +114,30 @@ function renderDetail() {
       ${multiline ? `<textarea name="text" rows="3" maxlength="${GOAL_TEXT_MAX}" placeholder="${kind.add}…" aria-label="${kind.add}" required></textarea>` : `<input name="text" maxlength="${GOAL_TEXT_MAX}" placeholder="${kind.add}" aria-label="${kind.add}" autocomplete="off" required>`}
       <button class="sp-primary">Добавить</button></form>`;
 
-  const wishBody = `<ul class="gd-chips">${wishes.map((g) => editing === g.id ? `<li class="gd-chip-edit">${editForm(g, 2)}</li>` : `<li class="gd-chip${g.done ? " is-done" : ""}">
-      <button type="button" data-toggle="${esc(g.id)}" role="checkbox" aria-checked="${g.done}"><i>${icon.check}</i>${esc(g.text)}</button>${actions(g)}</li>`).join("") || '<li class="gd-empty">Что маленькое и приятное можно сделать уже на этой неделе?</li>'}</ul>`;
+  const chip = (g) => editing === g.id ? `<li class="gd-chip-edit">${editForm(g, 2)}</li>` : `<li class="gd-chip${g.done ? " is-done" : ""}">
+      <button type="button" data-toggle="${esc(g.id)}" role="checkbox" aria-checked="${g.done}"><i>${icon.check}</i>${esc(g.text)}</button>${actions(g)}</li>`;
+  const chips = (list, hint) => `<ul class="gd-chips">${list.map(chip).join("") || (hint ? `<li class="gd-empty">${hint}</li>` : "")}</ul>`;
+  const groups = groupsOf(focus.id), loose = wishes.filter((g) => !groups.some((x) => x.id === g.groupId));
+  const groupHead = (grp, list) => {
+    const done = list.filter((g) => g.done).length;
+    if (groupEditing === grp.id) return `<form class="gd-group-form" data-group-form="${esc(grp.id)}"><input name="name" value="${esc(grp.name)}" maxlength="60" required aria-label="Название группы"><button class="sp-primary">Сохранить</button><button type="button" class="sp-ghost" data-group-cancel>Отмена</button></form>`;
+    return `<header class="gd-group-head"><button type="button" class="gd-group-toggle" data-group-toggle="${esc(grp.id)}" aria-expanded="${!collapsed.has(grp.id)}" aria-label="Свернуть или развернуть «${esc(grp.name)}»"><svg viewBox="0 0 24 24"><path d="m8 10 4 4 4-4"/></svg></button>
+      <h3>${esc(grp.name)}</h3><small>${done}/${list.length}</small>
+      <span class="gd-actions"><button type="button" class="sp-icon" data-group-edit="${esc(grp.id)}" aria-label="Переименовать группу">${icon.edit}</button><button type="button" class="sp-icon sp-danger" data-group-remove="${esc(grp.id)}" aria-label="Удалить группу">${icon.remove}</button></span></header>`;
+  };
+  const groupBlock = (grp) => {
+    const list = sorted(wishes.filter((g) => g.groupId === grp.id));
+    return `<section class="gd-group${collapsed.has(grp.id) ? " is-collapsed" : ""}">${groupHead(grp, list)}
+      <div class="gd-group-body">${chips(list, "В этой группе пока пусто — добавь первое желание.")}
+        <form class="gd-add gd-add-mini" data-add-form="${focus.id}:wish" data-group="${esc(grp.id)}"><input name="text" maxlength="${GOAL_TEXT_MAX}" placeholder="Новое желание в «${esc(grp.name)}»" aria-label="Новое желание в группе ${esc(grp.name)}" autocomplete="off" required><button class="sp-primary" aria-label="Добавить">＋</button></form></div></section>`;
+  };
+  const groupTools = groupAdding
+    ? `<form class="gd-group-form gd-group-new" data-group-form="new"><input name="name" maxlength="60" placeholder="Название группы, например «Утро» или «Дом»" aria-label="Название группы" autocomplete="off" required><button class="sp-primary">Создать</button><button type="button" class="sp-ghost" data-group-cancel>Отмена</button></form>`
+    : `<button type="button" class="gd-group-add" data-group-add>＋ Новая группа</button>`;
+  const wishBody = `<div class="gd-group-tools">${groupTools}</div>
+    ${groups.length ? `<div class="gd-groups">${groups.map(groupBlock).join("")}</div>` : ""}
+    ${groups.length && loose.length ? '<h3 class="gd-loose">Без группы</h3>' : ""}
+    ${!groups.length || loose.length ? chips(loose, groups.length ? "" : "Что маленькое и приятное можно сделать уже на этой неделе? Желания можно собирать в группы.") : ""}`;
 
   const goalDone = goals.filter((g) => g.done).length, pct = goals.length ? (goalDone / goals.length) * 100 : 0;
   const goalBody = `<div class="gd-goals">${goals.map((g) => editing === g.id ? `<article class="gd-goal is-editing">${editForm(g)}</article>` : `<article class="gd-goal${g.done ? " is-done" : ""}">
@@ -118,7 +147,7 @@ function renderDetail() {
 
   const visionBody = `<div class="gd-visions">${visions.map((g) => editing === g.id ? `<figure class="gd-vision is-editing">${editForm(g, 5)}</figure>` : `<figure class="gd-vision${g.done ? " is-done" : ""}">
       <blockquote>${esc(g.text)}</blockquote>
-      <figcaption><button type="button" class="gd-came-true" data-toggle="${esc(g.id)}" aria-pressed="${g.done}">${g.done ? "✓ Сбылось" : "Отметить, когда сбудется"}</button><span class="gd-actions">${actions(g)}</span></figcaption></figure>`).join("") || `<p class="gd-empty">Кем ты хочешь быть в этом аспекте к концу ${visionYear()}? Опиши это так, будто уже случилось.</p>`}</div>`;
+      <figcaption><button type="button" class="gd-came-true" data-toggle="${esc(g.id)}" aria-pressed="${g.done}">${g.done ? "✓ Сбылось" : "Отметить, когда сбудется"}</button><span class="gd-actions">${actions(g)}</span></figcaption></figure>`).join("") || `<p class="gd-empty">Какой ты хочешь видеть свою идеальную картину в этом аспекте через несколько лет? Опиши её так, будто всё уже случилось.</p>`}</div>`;
 
   $("#goal-detail").innerHTML = `
     <header class="gd-hero">
@@ -160,31 +189,51 @@ main.addEventListener("click", (e) => {
   if (d.add) { adding = d.add; editing = null; render(); $(`[data-add-form="${d.add}"] input`)?.focus(); }
   else if (d.edit) { editing = d.edit; adding = null; render(); $(`[data-edit-form="${d.edit}"] textarea`)?.focus(); }
   else if (d.cancel !== undefined) { editing = null; render(); }
+  else if (d.groupAdd !== undefined) { groupAdding = true; groupEditing = null; render(); $('[data-group-form="new"] input')?.focus(); }
+  else if (d.groupEdit) { groupEditing = d.groupEdit; groupAdding = false; render(); $(`[data-group-form="${d.groupEdit}"] input`)?.focus(); }
+  else if (d.groupCancel !== undefined) { groupAdding = groupEditing = null; render(); }
+  else if (d.groupToggle) { collapsed.has(d.groupToggle) ? collapsed.delete(d.groupToggle) : collapsed.add(d.groupToggle); render(); }
+  else if (d.groupRemove && confirm("Удалить группу? Желания из неё останутся, просто без группы.")) update((list, groups) => {
+    groups.splice(groups.findIndex((x) => x.id === d.groupRemove), 1);
+    for (const g of list) if (g.groupId === d.groupRemove) delete g.groupId;
+  });
   else if (d.toggle) update((list) => { const g = list.find((x) => x.id === d.toggle); g.done = !g.done; });
   else if (d.remove && confirm("Удалить?")) update((list) => list.splice(list.findIndex((x) => x.id === d.remove), 1));
 });
 
 main.addEventListener("submit", async (e) => {
   e.preventDefault();
-  const f = e.target, text = String(new FormData(f).get("text") || "").trim();
+  const f = e.target, data = new FormData(f), text = String(data.get("text") || data.get("name") || "").trim();
   if (!text) return;
+  if (f.dataset.groupForm) {
+    const id = f.dataset.groupForm, name = text;
+    groupAdding = groupEditing = null;
+    if (id === "new") await update((list, groups) => groups.push({ id: crypto.randomUUID(), sphereId: focus.id, name }));
+    else await update((list, groups) => (groups.find((x) => x.id === id).name = name));
+    return;
+  }
   if (f.dataset.addForm) {
-    const key = f.dataset.addForm, [sphereId, kind] = key.split(":");
-    const ok = await update((list) => list.push({ id: crypto.randomUUID(), sphereId, kind, text, done: false, year: kind === "vision" ? visionYear() : goalYear() }));
+    const key = f.dataset.addForm, [sphereId, kind] = key.split(":"), groupId = f.dataset.group || "";
+    const ok = await update((list) => list.push({ id: crypto.randomUUID(), sphereId, kind, text, done: false, year: kind === "vision" ? visionYear() : goalYear(), ...(groupId ? { groupId } : {}) }));
     if (ok) {
       adding = !focus && filter === "all" ? key : null;
       render();
-      $(`[data-add-form="${key}"] input, [data-add-form="${key}"] textarea`)?.focus();
+      const scope = groupId ? `[data-group="${groupId}"]` : ":not([data-group])";
+      $(`[data-add-form="${key}"]${scope} input, [data-add-form="${key}"]${scope} textarea`)?.focus();
     }
   } else if (f.dataset.editForm) {
-    const id = f.dataset.editForm;
+    const id = f.dataset.editForm, group = data.get("group");
     editing = null;
-    await update((list) => (list.find((x) => x.id === id).text = text));
+    await update((list) => {
+      const g = list.find((x) => x.id === id);
+      g.text = text;
+      if (group !== null) group ? (g.groupId = group) : delete g.groupId;
+    });
   }
 });
 
 main.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") { editing = adding = null; render(); }
+  if (e.key === "Escape") { editing = adding = groupEditing = null; groupAdding = false; render(); }
   // Ctrl/⌘+Enter отправляет многострочное поле
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target.matches("textarea")) e.target.form?.requestSubmit();
 });
