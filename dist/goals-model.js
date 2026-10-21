@@ -45,3 +45,23 @@ export function goalStats(state) {
     vision: { total: of('vision').length, done: of('vision').filter((g) => g.done).length },
   };
 }
+
+/** Уровни дохода в месяц ($). Уровень — последний, чей порог достигнут; пока доход не указан, стою на 4-м. */
+export const INCOME_LEVELS = [
+  { n: 1, from: 100, to: 500, name: 'Старт' },
+  { n: 2, from: 500, to: 1000, name: 'База' },
+  { n: 3, from: 1000, to: 2500, name: 'Стабильность' },
+  { n: 4, from: 2500, to: 5000, name: 'Комфорт' },
+  { n: 5, from: 5000, to: 10000, name: 'Достаток' },
+  { n: 6, from: 10000, to: 25000, name: 'Финансовая свобода' },
+  { n: 7, from: 25000, to: 50000, name: 'Высокий доход' },
+  { n: 8, from: 50000, to: 100000, name: 'Крупный капитал' },
+  { n: 9, from: 100000, to: null, name: 'Финансовая элита' },
+];
+export const INCOME_DEFAULT_LEVEL = 4;
+export const monthlyIncome = (state) => (Number.isFinite(state.income?.monthly) ? state.income.monthly : null);
+export function incomeLevel(state) {
+  const income = monthlyIncome(state);
+  if (income === null) return INCOME_DEFAULT_LEVEL;
+  return INCOME_LEVELS.filter((l) => income >= l.from).at(-1)?.n || 0;
+}

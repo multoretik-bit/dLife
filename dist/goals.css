@@ -173,3 +173,63 @@
   .gl-tier { padding: 14px; }
   .gl-tier small { display: none; }
 }
+
+/* ---------- Уровень дохода: лестница 1–9 (зелёная зона, золотой 4-й, красная зона) ---------- */
+.inc { --g: #3fa36f; --y: #f5b90b; --r: #d0533f; position: relative; overflow: hidden; isolation: isolate; display: grid; gap: 18px; padding: 24px 26px 22px; border-radius: var(--radius-lg); color: #f4efe6;
+  background: radial-gradient(520px 280px at 100% 0%, rgba(245, 185, 11, 0.22), transparent 70%), radial-gradient(480px 260px at 0% 100%, rgba(63, 163, 111, 0.2), transparent 70%), linear-gradient(135deg, #10201a, #1d1418 70%, #2a1512); box-shadow: var(--shadow-lg); }
+.inc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.inc-kicker { color: rgba(244, 239, 230, 0.66); font-size: 12.5px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; }
+.inc-head h2 { margin: 6px 0 4px; font-size: clamp(26px, 3.6vw, 36px); font-weight: 800; letter-spacing: -1px; background: linear-gradient(90deg, #ffe08a, var(--y)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.inc-head p { margin: 0; color: rgba(244, 239, 230, 0.75); font-size: 15px; font-weight: 600; }
+.inc-edit { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 14px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 999px; background: rgba(255, 255, 255, 0.07); color: #f4efe6; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.2s, border-color 0.2s; }
+.inc-edit:hover { background: rgba(255, 255, 255, 0.14); border-color: rgba(245, 185, 11, 0.6); }
+.inc-edit b { color: #ffe08a; }
+.inc-edit svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; opacity: 0.75; }
+.inc-form { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.inc-form label { display: inline-flex; align-items: center; gap: 4px; padding: 0 4px 0 14px; border-radius: 999px; background: #fff; color: var(--ink); font-weight: 800; }
+.inc-form input { width: 120px; border: 0; background: transparent; padding: 9px 8px; font-size: 15px; font-weight: 700; color: var(--ink); outline: none; }
+
+.inc-next { display: grid; gap: 8px; }
+.inc-next p { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 0; font-size: 14px; color: rgba(244, 239, 230, 0.8); }
+.inc-next b { color: #ff9c86; }
+.inc-track { display: block; height: 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.inc-track em { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--y), var(--r)); box-shadow: 0 0 14px rgba(245, 185, 11, 0.5); transition: width 0.8s var(--ease); }
+
+.inc-ladder { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); align-items: end; gap: 8px; margin: 4px 0 0; padding: 0; list-style: none; }
+.inc-step { --c: var(--g); display: grid; gap: 3px; text-align: center; opacity: 0.68; transition: opacity 0.2s; }
+.inc-step.inc-gold { --c: var(--y); }
+.inc-step.inc-red { --c: var(--r); }
+.inc-step:hover { opacity: 1; }
+.inc-bar { position: relative; display: grid; place-items: start center; height: calc(34px + var(--i) * 13px); padding-top: 8px; border-radius: 12px 12px 6px 6px; border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); background: color-mix(in srgb, var(--c) 16%, transparent); }
+.inc-bar b { font-size: 18px; font-weight: 900; color: var(--c); }
+.inc-bar i { position: absolute; top: 7px; right: 7px; width: 14px; height: 14px; }
+.inc-bar i svg { width: 100%; height: 100%; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.inc-step strong { font-size: 12.5px; font-weight: 800; line-height: 1.2; }
+.inc-step small { color: rgba(244, 239, 230, 0.6); font-size: 11px; font-weight: 700; white-space: nowrap; }
+.inc-step.is-passed { opacity: 0.9; }
+.inc-step.is-passed .inc-bar { background: linear-gradient(180deg, var(--c), color-mix(in srgb, var(--c) 55%, #000)); border-color: transparent; }
+.inc-step.is-passed .inc-bar b { color: #fff; }
+.inc-step.is-current { opacity: 1; }
+.inc-step.is-current .inc-bar { background: linear-gradient(180deg, #ffe08a, var(--c)); border-color: transparent; box-shadow: 0 0 0 2px rgba(255, 224, 138, 0.55), 0 0 28px color-mix(in srgb, var(--c) 70%, transparent); animation: inc-glow 2.6s ease-in-out infinite; }
+.inc-step.is-current .inc-bar b { color: #2a1a05; }
+.inc-bar em { position: absolute; top: -26px; padding: 2px 8px; border-radius: 999px; background: #ffe08a; color: #2a1a05; font-size: 11px; font-style: normal; font-weight: 900; white-space: nowrap; }
+.inc-step.is-current strong { color: #ffe08a; }
+.inc-step.is-next { opacity: 0.85; }
+.inc-step.is-next .inc-bar { border-style: dashed; border-width: 2px; }
+@keyframes inc-glow { 50% { box-shadow: 0 0 0 2px rgba(255, 224, 138, 0.75), 0 0 40px color-mix(in srgb, var(--c) 85%, transparent); } }
+.inc.is-levelup .is-current .inc-bar { animation: inc-up 0.9s var(--ease) both, inc-glow 2.6s 0.9s ease-in-out infinite; }
+@keyframes inc-up { from { transform: translateY(24px) scale(0.9); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .inc-step.is-current .inc-bar, .inc.is-levelup .is-current .inc-bar { animation: none; } }
+
+/* Узкий экран: лестница вертикально, ступени уходят вправо */
+@media (max-width: 760px) {
+  .inc { padding: 20px 18px; }
+  .inc-ladder { grid-template-columns: 1fr; gap: 6px; }
+  .inc-step { grid-template-columns: 44px 1fr auto; align-items: center; gap: 10px; text-align: left; margin-left: calc((var(--i) - 1) * 6px); }
+  .inc-bar { height: 40px; place-items: center; padding: 0; border-radius: 12px; }
+  .inc-bar i { display: none; }
+  .inc-bar em { top: 50%; left: calc(100% + 8px); transform: translateY(-50%); display: none; }
+  .inc-step strong { font-size: 14px; }
+}
+#goal-income:empty { display: none; }
+.gd .inc { margin: 0; }

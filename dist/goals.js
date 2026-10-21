@@ -1,7 +1,7 @@
 import { SPHERES } from "./schedule.js";
 import { ScheduleStore } from "./store.js";
 import { normalize, escapeHTML as esc } from "./development.js";
-import { KINDS, kindTitle, goalList, changeGoals, goalStats, goalYear, visionYear, GOAL_TEXT_MAX } from "./goals-model.js";
+import { KINDS, kindTitle, goalList, changeGoals, goalStats, goalYear, visionYear, GOAL_TEXT_MAX, INCOME_LEVELS, incomeLevel, monthlyIncome } from "./goals-model.js";
 
 const $ = (s) => document.querySelector(s);
 const store = new ScheduleStore();
@@ -13,7 +13,7 @@ const icon = {
 };
 // ?sphere=ID открывает отдельную страницу аспекта, без него — сетка всех аспектов.
 const focus = SPHERES.find((s) => s.id === new URLSearchParams(location.search).get("sphere"));
-let state = null, busy = false, filter = "all", editing = null, adding = null, groupEditing = null, groupAdding = false, toastTimer;
+let state = null, busy = false, filter = "all", editing = null, adding = null, groupEditing = null, groupAdding = false, incomeEditing = false, toastTimer;
 const collapsed = new Set();
 
 function message(text, sticky = false) {
@@ -22,13 +22,15 @@ function message(text, sticky = false) {
   if (!sticky && text) toastTimer = setTimeout(() => ($("#sphere-error").textContent = ""), 2200);
 }
 
-async function update(change) {
+const update = (change) => save(() => changeGoals(state, change));
+
+async function save(next, saved = "Сохранено") {
   if (busy || !state) return false;
   busy = true;
   try {
-    state = normalize(await store.save(changeGoals(state, change)));
+    state = normalize(await store.save(next()));
     window.dispatchEvent(new CustomEvent("dlife:state", { detail: state }));
-    message("Сохранено");
+    message(saved);
     return true;
   } catch (e) {
     message(e.message, true);
@@ -48,6 +50,35 @@ const groupSelect = (g) => {
   return groups.length ? `<select name="group" aria-label="Группа"><option value="">Без группы</option>${groups.map((x) => `<option value="${esc(x.id)}"${g.groupId === x.id ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select>` : "";
 };
 const editForm = (g, rows = 3) => `<form class="gl-edit" data-edit-form="${esc(g.id)}"><textarea name="text" rows="${rows}" maxlength="${GOAL_TEXT_MAX}" required aria-label="Текст">${esc(g.text)}</textarea>${groupSelect(g)}<div><button class="sp-primary">Сохранить</button><button type="button" class="sp-ghost" data-cancel>Отмена</button></div></form>`;
+
+/* ---------- Уровень дохода: лестница из 9 ступеней ---------- */
+const usd = (n) => "$" + Math.round(n).toLocaleString("ru-RU");
+const range = (l) => (l.to ? `${usd(l.from)}–${usd(l.to)}` : `${usd(l.from)}+`);
+const zone = (n) => (n <= 3 ? "green" : n === 4 ? "gold" : "red");
+let celebrate = false;
+
+function renderIncome() {
+  const level = incomeLevel(state), income = monthlyIncome(state);
+  const cur = INCOME_LEVELS.find((l) => l.n === level), next = INCOME_LEVELS.find((l) => l.n === level + 1), base = cur?.from || 0;
+  const pct = income !== null && next ? Math.min(100, Math.max(0, ((income - base) / (next.from - base)) * 100)) : null;
+  const edit = incomeEditing
+    ? `<form class="inc-form" data-income-form><label>$<input name="income" type="number" min="0" step="1" inputmode="numeric" value="${income ?? ""}" placeholder="за месяц" aria-label="Мой доход в месяц, $" required></label><button class="sp-primary">Сохранить</button><button type="button" class="sp-ghost" data-income-cancel>Отмена</button></form>`
+    : `<button type="button" class="inc-edit" data-income-edit>${income !== null ? `Мой доход: <b>${usd(income)}</b> / мес` : "Указать доход за месяц"}${icon.edit}</button>`;
+  const step = (l) => {
+    const st = l.n < level ? " is-passed" : l.n === level ? " is-current" : l.n === level + 1 ? " is-next" : "";
+    return `<li class="inc-step inc-${zone(l.n)}${st}" style="--i:${l.n}"${l.n === level ? ' aria-current="step"' : ""}>
+        <div class="inc-bar"><b>${l.n}</b>${l.n < level ? `<i>${icon.check}</i>` : ""}${l.n === level ? "<em>Я здесь</em>" : ""}</div>
+        <strong>${l.name}</strong><small>${range(l)}</small></li>`;
+  };
+  const nextText = income === null ? `когда доход выйдет за ${usd(next?.from || 0)} в месяц` : `ещё ${usd(Math.max(0, (next?.from || 0) - income))} до ${usd(next?.from || 0)} в месяц`;
+  const html = `<section class="inc${celebrate ? " is-levelup" : ""}" aria-label="Уровень дохода">
+      <header class="inc-head"><div><span class="inc-kicker">💰 Уровень дохода</span><h2>${cur ? `Уровень ${level} · ${cur.name}` : "Путь к первому уровню"}</h2><p>${cur ? `${range(cur)} в месяц` : `первый уровень — от ${usd(INCOME_LEVELS[0].from)} в месяц`}</p></div>${edit}</header>
+      ${next ? `<div class="inc-next"><p><span>Следующий — <b>${next.n} · ${next.name}</b></span><span>${nextText}</span></p>${pct !== null ? `<i class="inc-track"><em style="width:${pct}%"></em></i>` : ""}</div>` : '<div class="inc-next"><p><span>🏆 Высший уровень достигнут</span></p></div>'}
+      <ol class="inc-ladder">${INCOME_LEVELS.map(step).join("")}</ol>
+    </section>`;
+  celebrate = false;
+  return html;
+}
 
 /* ---------- Сетка всех аспектов ---------- */
 function renderTiers() {
@@ -78,6 +109,7 @@ function group(sphereId, kind, items, single) {
 }
 
 function renderGrid() {
+  $("#goal-income").innerHTML = renderIncome();
   renderTiers();
   const all = goalList(state), kinds = filter === "all" ? KINDS : KINDS.filter((k) => k.id === filter), single = filter !== "all";
   $("#goal-grid").innerHTML = SPHERES.map((sphere) => {
@@ -156,6 +188,7 @@ function renderDetail() {
       <p class="gd-stats"><span>✨ ${wishes.filter((g) => g.done).length}/${wishes.length} желаний</span><span>🎯 ${goalDone}/${goals.length} целей</span><span>🔭 ${visions.length} в видении</span></p>
       <nav class="gd-nav" aria-label="Другие аспекты"><a href="/goals/?sphere=${prev.id}" style="--c:${prev.color}">← ${esc(prev.name)}</a><a href="/goals/?sphere=${next.id}" style="--c:${next.color}">${esc(next.name)} →</a></nav>
     </header>
+    ${focus.id === "9" ? renderIncome() : ""}
     ${block(visionKind, visions, visionBody, addForm(visionKind, true))}
     ${block(goalKind, goals, goalBody, addForm(goalKind), goalExtra)}
     ${block(wishKind, wishes, wishBody, addForm(wishKind))}`;
@@ -169,7 +202,7 @@ function render() {
 if (focus) {
   document.title = `dLife — Цели · ${focus.name}`;
   document.documentElement.style.setProperty("--sphere-accent", focus.color);
-  for (const id of ["#goal-head", "#goal-tiers", "#goal-grid", "#goal-back"]) $(id).hidden = true;
+  for (const id of ["#goal-head", "#goal-income", "#goal-tiers", "#goal-grid", "#goal-back"]) $(id).hidden = true;
   $("#goal-detail").hidden = false;
 }
 
@@ -189,6 +222,8 @@ main.addEventListener("click", (e) => {
   if (d.add) { adding = d.add; editing = null; render(); $(`[data-add-form="${d.add}"] input`)?.focus(); }
   else if (d.edit) { editing = d.edit; adding = null; render(); $(`[data-edit-form="${d.edit}"] textarea`)?.focus(); }
   else if (d.cancel !== undefined) { editing = null; render(); }
+  else if (d.incomeEdit !== undefined) { incomeEditing = true; render(); $("[data-income-form] input")?.focus(); }
+  else if (d.incomeCancel !== undefined) { incomeEditing = false; render(); }
   else if (d.groupAdd !== undefined) { groupAdding = true; groupEditing = null; render(); $('[data-group-form="new"] input')?.focus(); }
   else if (d.groupEdit) { groupEditing = d.groupEdit; groupAdding = false; render(); $(`[data-group-form="${d.groupEdit}"] input`)?.focus(); }
   else if (d.groupCancel !== undefined) { groupAdding = groupEditing = null; render(); }
@@ -204,6 +239,15 @@ main.addEventListener("click", (e) => {
 main.addEventListener("submit", async (e) => {
   e.preventDefault();
   const f = e.target, data = new FormData(f), text = String(data.get("text") || data.get("name") || "").trim();
+  if (f.dataset.incomeForm !== undefined) {
+    const monthly = Math.round(Number(data.get("income")));
+    if (!Number.isFinite(monthly) || monthly < 0) return;
+    const before = incomeLevel(state), after = incomeLevel({ income: { monthly } }), lvl = INCOME_LEVELS.find((l) => l.n === after);
+    incomeEditing = false;
+    celebrate = after > before;
+    await save(() => ({ ...state, income: { monthly, updatedAt: new Date().toISOString() } }), celebrate && lvl ? `🎉 Новый уровень ${after} — ${lvl.name}!` : "Сохранено");
+    return;
+  }
   if (!text) return;
   if (f.dataset.groupForm) {
     const id = f.dataset.groupForm, name = text;
@@ -233,7 +277,7 @@ main.addEventListener("submit", async (e) => {
 });
 
 main.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") { editing = adding = groupEditing = null; groupAdding = false; render(); }
+  if (e.key === "Escape") { editing = adding = groupEditing = null; groupAdding = incomeEditing = false; render(); }
   // Ctrl/⌘+Enter отправляет многострочное поле
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && e.target.matches("textarea")) e.target.form?.requestSubmit();
 });
