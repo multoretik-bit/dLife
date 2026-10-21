@@ -203,3 +203,86 @@
   .gd-b-vision .gd-add.gd-add-mini { align-items: flex-end; }
 }
 @media (prefers-reduced-motion: reduce) { .gd-group-body { animation: none; } }
+
+/* ---------- /goals/: три больших раздела ---------- */
+.gl-tiers { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+a.gl-tier { display: flex; flex-direction: column; min-height: 210px; padding: 24px 24px 20px; gap: 6px; text-decoration: none; border-radius: 26px; }
+a.gl-tier .gl-tier-icon { font-size: 34px; margin-bottom: 10px; }
+a.gl-tier strong { font-size: 21px; letter-spacing: -0.4px; }
+a.gl-tier small { font-size: 14px; }
+a.gl-tier b { top: 22px; right: 22px; font-size: 20px; }
+.gl-tier-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; padding-top: 18px; color: var(--ink-2); font-size: 13.5px; font-weight: 700; }
+.gl-tier-foot i { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(15, 42, 64, 0.08); transition: transform 0.2s var(--ease); }
+.gl-tier-foot svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+a.gl-tier:hover { box-shadow: 0 0 0 2px var(--tier), var(--shadow-lg); }
+a.gl-tier:hover .gl-tier-foot i { transform: translate(2px, -2px); }
+
+/* ---------- ?kind=…: раздел со списком аспектов ---------- */
+.gk-hero { padding: 22px 28px 24px; border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+.gk-hero.gl-wish { background: linear-gradient(160deg, #fff0f6, #fff 55%); }
+.gk-hero.gl-goal { background: linear-gradient(160deg, #eaf1ff, #fff 55%); }
+.gk-hero.gl-vision { background: linear-gradient(160deg, #f3edff, #fff 55%); }
+.gk-switch { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.gk-switch a { padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255, 255, 255, 0.8); color: var(--ink-2); font-size: 13px; font-weight: 700; text-decoration: none; }
+.gk-switch a:hover { background: #fff; color: var(--ink); }
+.gk-title { display: flex; align-items: center; gap: 16px; margin: 18px 0 14px; }
+.gk-title .gd-ico { width: 58px; height: 58px; border-radius: 18px; font-size: 28px; background: #fff; box-shadow: var(--shadow); }
+.gk-title h1 { margin: 0; font-size: clamp(28px, 4.4vw, 44px); font-weight: 800; letter-spacing: -1.2px; line-height: 1.1; }
+.gk-title p { margin: 4px 0 0; color: var(--muted); font-size: 15px; font-weight: 600; }
+.gk-title b { margin-left: auto; padding: 6px 14px; border-radius: 999px; background: #fff; font-size: 18px; box-shadow: 0 2px 8px rgba(15, 42, 64, 0.06); }
+.gk-tip { margin: 0; color: var(--ink-2); font-size: 14px; font-weight: 600; }
+.gk-hero .gd-progress { margin: 0; }
+.gk-all { margin-top: 10px; padding-left: 0; }
+
+.gk-list { display: grid; gap: 12px; }
+.gk-aspect { border: 1px solid var(--line); border-left: 5px solid var(--accent); border-radius: 22px; background: var(--card); box-shadow: var(--shadow); }
+.gk-head { display: flex; align-items: center; gap: 10px; min-height: 64px; padding: 10px 18px; }
+.gk-head h2 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -0.3px; }
+.gk-head small { padding: 2px 10px; border-radius: 999px; background: var(--soft); color: var(--ink-2); font-size: 13px; font-weight: 800; }
+.gk-head .sp-dot { flex: none; width: 14px; height: 14px; border-radius: 5px; }
+.gk-page { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; color: var(--muted); font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.gk-page svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.gk-page:hover { color: var(--blue-deep); }
+
+/* Цели на год: всё открыто сразу */
+.gk-goal { padding-bottom: 16px; }
+.gk-goal .gk-head .gl-plus { margin-left: auto; }
+.gk-goal .gk-head .gl-plus + .gk-page { margin-left: 8px; }
+.gk-goal .gd-goals, .gk-goal .gd-add { margin: 0 18px; }
+.gk-goal .gd-add { margin-top: 12px; }
+.gk-goal.is-empty { padding-bottom: 0; box-shadow: none; background: rgba(255, 255, 255, 0.6); }
+.gk-goal.is-empty .gk-head h2 { color: var(--ink-2); font-size: 17px; }
+
+/* Желания и видение: аспект открывается кликом */
+.gk-fold .gk-head { padding: 0; }
+.gk-toggle { display: flex; flex: 1; align-items: center; gap: 10px; min-height: 64px; padding: 10px 18px; border: 0; border-radius: 20px; background: none; color: var(--ink); text-align: left; cursor: pointer; transition: background 0.2s; }
+.gk-toggle:hover { background: var(--soft); }
+.gk-toggle i { display: grid; place-items: center; margin-left: auto; width: 34px; height: 34px; border-radius: 50%; background: var(--soft); color: var(--ink-2); transform: rotate(-90deg); transition: transform 0.2s var(--ease); }
+.gk-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.gk-fold.is-open .gk-toggle i { transform: none; background: color-mix(in srgb, var(--accent) 22%, #fff); color: var(--ink); }
+.gk-fold.is-open .gk-toggle { border-radius: 20px 20px 0 0; }
+.gk-body { padding: 4px 18px 18px; animation: gd-open 0.22s var(--ease); }
+.gk-body-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
+.gk-body-foot .gk-page { margin: 0; }
+
+@media (max-width: 900px) {
+  .gl-tiers { grid-template-columns: 1fr; }
+  a.gl-tier { min-height: 0; }
+  a.gl-tier small { display: block; }
+}
+@media (max-width: 760px) {
+  .gk-hero { padding: 16px 16px 18px; }
+  .gk-hero .gd-hero-top { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .gk-switch { justify-content: flex-start; }
+  .gk-title { gap: 12px; margin: 12px 0 10px; }
+  .gk-title .gd-ico { width: 48px; height: 48px; font-size: 24px; }
+  .gk-head { padding: 8px 12px; flex-wrap: wrap; }
+  .gk-toggle { padding: 8px 12px; min-height: 58px; }
+  .gk-head h2 { font-size: 17px; }
+  .gk-goal .gk-page { display: none; }
+  .gk-goal .gd-goals, .gk-goal .gd-add { margin: 0 12px; }
+  .gk-body { padding: 4px 10px 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .gk-body { animation: none; } }
+.gk { display: grid; gap: 16px; }
+.gk-goal .gk-head .gl-plus { white-space: nowrap; }
