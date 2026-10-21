@@ -72,6 +72,13 @@ test('wish groups are validated and deleting a group keeps its wishes', () => {
   assert.equal(changeGoals(emptyState(), () => {}).wishGroups.length, 0);
 });
 
+test('vision goals can be split into categories', () => {
+  const base = { ...emptyState(), goals: [{ id: 'v1', sphereId: '5', kind: 'vision', text: 'Дом у моря', done: false, year: 2027, groupId: 'c1' }], wishGroups: [{ id: 'c1', sphereId: '5', name: 'Дом', kind: 'vision' }, { id: 'g1', sphereId: '5', name: 'Утро' }] };
+  assert.ok(validateState(base));
+  assert.ok(validateState({ ...base, wishGroups: [{ id: 'c1', sphereId: '5', name: 'Дом', kind: 'wish' }] }));
+  assert.equal(validateState({ ...base, wishGroups: [{ id: 'c1', sphereId: '5', name: 'Дом', kind: 'goal' }] }), false);
+});
+
 test('calorie periods: week is Monday-Sunday, month is calendar, future days are not counted', async () => {
   const { periodDays, periodSummary, CALORIE_GOAL } = await import('../dist/health.js');
   const { dateKey } = await import('../dist/schedule.js');

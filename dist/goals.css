@@ -173,3 +173,33 @@
   .gl-tier { padding: 14px; }
   .gl-tier small { display: none; }
 }
+
+/* Группы: общие мелочи */
+.gd-group-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.gd-group-all { min-height: 38px; padding: 6px 14px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.gd-group-all:hover { background: rgba(15, 42, 64, 0.05); color: var(--ink); }
+.gd-group-head h3[data-group-toggle] { cursor: pointer; user-select: none; }
+.gd-group-body { animation: gd-open 0.22s var(--ease); }
+@keyframes gd-open { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+/* Категории видения на несколько лет — в фиолетовой гамме блока видения, на всю ширину */
+.gd-b-vision .gd-groups { grid-template-columns: 1fr; }
+.gd-b-vision .gd-group { padding: 16px 18px 18px; border-color: #ddd0f6; background: linear-gradient(170deg, #f7f2ff, #fff 70%); }
+.gd-b-vision .gd-group-head h3 { font-size: 18px; }
+.gd-b-vision .gd-group-head small,
+.gd-b-vision .gd-group-toggle { color: #7a52c7; }
+.gd-b-vision .gd-group.is-collapsed { padding-bottom: 16px; background: #fbf9ff; }
+.gd-b-vision .gd-group .gd-vision { background: #fff; }
+.gd-b-vision .gd-group-add { border-color: #cdbbef; color: #7a52c7; }
+.gd-b-vision .gd-group-add:hover { background: #f5efff; border-color: #8a63d2; }
+.gd-b-vision .gd-add-mini { align-items: flex-end; }
+.gd-b-vision .gd-add-mini textarea { flex: 1; min-width: 0; padding: 10px 14px; font-size: 14px; resize: vertical; }
+.gd-b-vision .gl-edit select { margin-top: 8px; }
+
+@media (max-width: 760px) {
+  .gd-b-vision .gd-group { padding: 14px 12px 14px; }
+  .gd-b-vision .gd-group-head h3 { font-size: 16px; white-space: normal; }
+  .gd-b-vision .gd-group .gd-vision { padding: 18px 14px 12px 20px; }
+  .gd-b-vision .gd-add.gd-add-mini { align-items: flex-end; }
+}
+@media (prefers-reduced-motion: reduce) { .gd-group-body { animation: none; } }

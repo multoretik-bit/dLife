@@ -14,7 +14,15 @@ const icon = {
 // ?sphere=ID открывает отдельную страницу аспекта, без него — сетка всех аспектов.
 const focus = SPHERES.find((s) => s.id === new URLSearchParams(location.search).get("sphere"));
 let state = null, busy = false, filter = "all", editing = null, adding = null, groupEditing = null, groupAdding = false, toastTimer;
-const collapsed = new Set();
+// Свёрнутые группы и категории запоминаются на этом устройстве.
+const COLLAPSED_KEY = "dlife-goal-groups-collapsed";
+const collapsed = new Set((() => { try { return JSON.parse(localStorage.getItem(COLLAPSED_KEY) || "[]"); } catch { return []; } })());
+const saveCollapsed = () => { try { localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...collapsed])); } catch {} };
+// Группы желаний и категории видения устроены одинаково, отличаются только словами.
+const GROUP_TEXT = {
+  wish: { one: "группа", add: "＋ Новая группа", none: "Без группы", label: "Группа", name: "Название группы, например «Утро» или «Дом»", empty: "В этой группе пока пусто — добавь первое желание.", item: (n) => `Новое желание в «${n}»`, remove: "Удалить группу? Желания из неё останутся, просто без группы." },
+  vision: { one: "категория", add: "＋ Новая категория", none: "Без категории", label: "Категория", name: "Название категории, например «Дом», «Карьера», «Путешествия»", empty: "В этой категории пока пусто — опиши, какой ты видишь эту часть жизни.", item: (n) => `Новая картина в «${n}»…`, remove: "Удалить категорию? Записи видения из неё останутся, просто без категории." },
+};
 
 function message(text, sticky = false) {
   clearTimeout(toastTimer);
@@ -39,13 +47,14 @@ async function update(change) {
   }
 }
 
-const groupsOf = (sphereId) => (state.wishGroups || []).filter((x) => x.sphereId === sphereId);
+const groupKind = (grp) => grp?.kind || "wish";
+const groupsOf = (sphereId, kind = "wish") => (state.wishGroups || []).filter((x) => x.sphereId === sphereId && groupKind(x) === kind);
 const groupName = (id) => (state.wishGroups || []).find((x) => x.id === id)?.name;
 const sorted = (list) => [...list].sort((a, b) => a.done - b.done);
 const actions = (g) => `<button type="button" class="sp-icon" data-edit="${esc(g.id)}" aria-label="Изменить">${icon.edit}</button><button type="button" class="sp-icon sp-danger" data-remove="${esc(g.id)}" aria-label="Удалить">${icon.remove}</button>`;
 const groupSelect = (g) => {
-  const groups = g.kind === "wish" ? groupsOf(g.sphereId) : [];
-  return groups.length ? `<select name="group" aria-label="Группа"><option value="">Без группы</option>${groups.map((x) => `<option value="${esc(x.id)}"${g.groupId === x.id ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select>` : "";
+  const t = GROUP_TEXT[g.kind], groups = t ? groupsOf(g.sphereId, g.kind) : [];
+  return groups.length ? `<select name="group" aria-label="${t.label}"><option value="">${t.none}</option>${groups.map((x) => `<option value="${esc(x.id)}"${g.groupId === x.id ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select>` : "";
 };
 const editForm = (g, rows = 3) => `<form class="gl-edit" data-edit-form="${esc(g.id)}"><textarea name="text" rows="${rows}" maxlength="${GOAL_TEXT_MAX}" required aria-label="Текст">${esc(g.text)}</textarea>${groupSelect(g)}<div><button class="sp-primary">Сохранить</button><button type="button" class="sp-ghost" data-cancel>Отмена</button></div></form>`;
 
@@ -117,27 +126,40 @@ function renderDetail() {
   const chip = (g) => editing === g.id ? `<li class="gd-chip-edit">${editForm(g, 2)}</li>` : `<li class="gd-chip${g.done ? " is-done" : ""}">
       <button type="button" data-toggle="${esc(g.id)}" role="checkbox" aria-checked="${g.done}"><i>${icon.check}</i>${esc(g.text)}</button>${actions(g)}</li>`;
   const chips = (list, hint) => `<ul class="gd-chips">${list.map(chip).join("") || (hint ? `<li class="gd-empty">${hint}</li>` : "")}</ul>`;
-  const groups = groupsOf(focus.id), loose = wishes.filter((g) => !groups.some((x) => x.id === g.groupId));
+  const visionCard = (g) => editing === g.id ? `<figure class="gd-vision is-editing">${editForm(g, 5)}</figure>` : `<figure class="gd-vision${g.done ? " is-done" : ""}">
+      <blockquote>${esc(g.text)}</blockquote>
+      <figcaption><button type="button" class="gd-came-true" data-toggle="${esc(g.id)}" aria-pressed="${g.done}">${g.done ? "✓ Сбылось" : "Отметить, когда сбудется"}</button><span class="gd-actions">${actions(g)}</span></figcaption></figure>`;
+  const visionList = (list, hint) => `<div class="gd-visions">${list.map(visionCard).join("") || (hint ? `<p class="gd-empty">${hint}</p>` : "")}</div>`;
+  const view = { wish: chips, vision: visionList };
+
   const groupHead = (grp, list) => {
-    const done = list.filter((g) => g.done).length;
-    if (groupEditing === grp.id) return `<form class="gd-group-form" data-group-form="${esc(grp.id)}"><input name="name" value="${esc(grp.name)}" maxlength="60" required aria-label="Название группы"><button class="sp-primary">Сохранить</button><button type="button" class="sp-ghost" data-group-cancel>Отмена</button></form>`;
+    const done = list.filter((g) => g.done).length, t = GROUP_TEXT[groupKind(grp)];
+    if (groupEditing === grp.id) return `<form class="gd-group-form" data-group-form="${esc(grp.id)}"><input name="name" value="${esc(grp.name)}" maxlength="60" required aria-label="Название: ${t.one}"><button class="sp-primary">Сохранить</button><button type="button" class="sp-ghost" data-group-cancel>Отмена</button></form>`;
     return `<header class="gd-group-head"><button type="button" class="gd-group-toggle" data-group-toggle="${esc(grp.id)}" aria-expanded="${!collapsed.has(grp.id)}" aria-label="Свернуть или развернуть «${esc(grp.name)}»"><svg viewBox="0 0 24 24"><path d="m8 10 4 4 4-4"/></svg></button>
-      <h3>${esc(grp.name)}</h3><small>${done}/${list.length}</small>
-      <span class="gd-actions"><button type="button" class="sp-icon" data-group-edit="${esc(grp.id)}" aria-label="Переименовать группу">${icon.edit}</button><button type="button" class="sp-icon sp-danger" data-group-remove="${esc(grp.id)}" aria-label="Удалить группу">${icon.remove}</button></span></header>`;
+      <h3 data-group-toggle="${esc(grp.id)}">${esc(grp.name)}</h3><small>${done}/${list.length}</small>
+      <span class="gd-actions"><button type="button" class="sp-icon" data-group-edit="${esc(grp.id)}" aria-label="Переименовать">${icon.edit}</button><button type="button" class="sp-icon sp-danger" data-group-remove="${esc(grp.id)}" aria-label="Удалить">${icon.remove}</button></span></header>`;
   };
-  const groupBlock = (grp) => {
-    const list = sorted(wishes.filter((g) => g.groupId === grp.id));
+  const groupBlock = (grp, items) => {
+    const kind = groupKind(grp), t = GROUP_TEXT[kind], list = sorted(items.filter((g) => g.groupId === grp.id)), hint = esc(t.item(grp.name));
+    const field = kind === "vision"
+      ? `<textarea name="text" rows="2" maxlength="${GOAL_TEXT_MAX}" placeholder="${hint}" aria-label="${hint}" required></textarea>`
+      : `<input name="text" maxlength="${GOAL_TEXT_MAX}" placeholder="${hint}" aria-label="${hint}" autocomplete="off" required>`;
     return `<section class="gd-group${collapsed.has(grp.id) ? " is-collapsed" : ""}">${groupHead(grp, list)}
-      <div class="gd-group-body">${chips(list, "В этой группе пока пусто — добавь первое желание.")}
-        <form class="gd-add gd-add-mini" data-add-form="${focus.id}:wish" data-group="${esc(grp.id)}"><input name="text" maxlength="${GOAL_TEXT_MAX}" placeholder="Новое желание в «${esc(grp.name)}»" aria-label="Новое желание в группе ${esc(grp.name)}" autocomplete="off" required><button class="sp-primary" aria-label="Добавить">＋</button></form></div></section>`;
+      <div class="gd-group-body">${view[kind](list, t.empty)}
+        <form class="gd-add gd-add-mini" data-add-form="${focus.id}:${kind}" data-group="${esc(grp.id)}">${field}<button class="sp-primary" aria-label="Добавить">＋</button></form></div></section>`;
   };
-  const groupTools = groupAdding
-    ? `<form class="gd-group-form gd-group-new" data-group-form="new"><input name="name" maxlength="60" placeholder="Название группы, например «Утро» или «Дом»" aria-label="Название группы" autocomplete="off" required><button class="sp-primary">Создать</button><button type="button" class="sp-ghost" data-group-cancel>Отмена</button></form>`
-    : `<button type="button" class="gd-group-add" data-group-add>＋ Новая группа</button>`;
-  const wishBody = `<div class="gd-group-tools">${groupTools}</div>
-    ${groups.length ? `<div class="gd-groups">${groups.map(groupBlock).join("")}</div>` : ""}
-    ${groups.length && loose.length ? '<h3 class="gd-loose">Без группы</h3>' : ""}
-    ${!groups.length || loose.length ? chips(loose, groups.length ? "" : "Что маленькое и приятное можно сделать уже на этой неделе? Желания можно собирать в группы.") : ""}`;
+  // Блок с группами: кнопки «новая группа» / «свернуть все», сами группы и записи без группы.
+  const grouped = (kind, items, looseHint) => {
+    const t = GROUP_TEXT[kind], groups = groupsOf(focus.id, kind), loose = items.filter((g) => !groups.some((x) => x.id === g.groupId));
+    const tools = groupAdding === kind
+      ? `<form class="gd-group-form gd-group-new" data-group-form="new:${kind}"><input name="name" maxlength="60" placeholder="${t.name}" aria-label="${t.name}" autocomplete="off" required><button class="sp-primary">Создать</button><button type="button" class="sp-ghost" data-group-cancel>Отмена</button></form>`
+      : `<button type="button" class="gd-group-add" data-group-add="${kind}">${t.add}</button>${groups.length > 1 ? `<button type="button" class="gd-group-all" data-group-all="${kind}">${groups.every((x) => collapsed.has(x.id)) ? "Развернуть все" : "Свернуть все"}</button>` : ""}`;
+    return `<div class="gd-group-tools">${tools}</div>
+      ${groups.length ? `<div class="gd-groups">${groups.map((grp) => groupBlock(grp, items)).join("")}</div>` : ""}
+      ${groups.length && loose.length ? `<h3 class="gd-loose">${t.none}</h3>` : ""}
+      ${!groups.length || loose.length ? view[kind](loose, groups.length ? "" : looseHint) : ""}`;
+  };
+  const wishBody = grouped("wish", wishes, "Что маленькое и приятное можно сделать уже на этой неделе? Желания можно собирать в группы.");
 
   const goalDone = goals.filter((g) => g.done).length, pct = goals.length ? (goalDone / goals.length) * 100 : 0;
   const goalBody = `<div class="gd-goals">${goals.map((g) => editing === g.id ? `<article class="gd-goal is-editing">${editForm(g)}</article>` : `<article class="gd-goal${g.done ? " is-done" : ""}">
@@ -145,9 +167,7 @@ function renderDetail() {
       <p>${esc(g.text)}</p><div class="gd-actions">${actions(g)}</div></article>`).join("") || '<p class="gd-empty">Какой конкретный результат в этом аспекте ты хочешь к концу года?</p>'}</div>`;
   const goalExtra = `<div class="gd-progress"><i><em style="width:${pct}%"></em></i><span>${goals.length ? `Выполнено ${goalDone} из ${goals.length}` : "Целей пока нет"} · до конца ${goalYear()} года ${daysLeft()} дн.</span></div>`;
 
-  const visionBody = `<div class="gd-visions">${visions.map((g) => editing === g.id ? `<figure class="gd-vision is-editing">${editForm(g, 5)}</figure>` : `<figure class="gd-vision${g.done ? " is-done" : ""}">
-      <blockquote>${esc(g.text)}</blockquote>
-      <figcaption><button type="button" class="gd-came-true" data-toggle="${esc(g.id)}" aria-pressed="${g.done}">${g.done ? "✓ Сбылось" : "Отметить, когда сбудется"}</button><span class="gd-actions">${actions(g)}</span></figcaption></figure>`).join("") || `<p class="gd-empty">Какой ты хочешь видеть свою идеальную картину в этом аспекте через несколько лет? Опиши её так, будто всё уже случилось.</p>`}</div>`;
+  const visionBody = grouped("vision", visions, "Какой ты хочешь видеть свою идеальную картину в этом аспекте через несколько лет? Опиши её так, будто всё уже случилось. Записи можно разложить по категориям — «Дом», «Карьера», «Путешествия».");
 
   $("#goal-detail").innerHTML = `
     <header class="gd-hero">
@@ -181,19 +201,34 @@ $("#goal-tiers").addEventListener("click", (e) => {
   render();
 });
 
+function toggleGroup(id) {
+  collapsed.has(id) ? collapsed.delete(id) : collapsed.add(id);
+  saveCollapsed();
+  render();
+}
+
 const main = $("main");
 main.addEventListener("click", (e) => {
+  // Группу можно открыть и закрыть и кликом по её названию.
+  const title = e.target.closest("h3[data-group-toggle]");
+  if (title && !busy) return toggleGroup(title.dataset.groupToggle);
   const b = e.target.closest("button");
   if (!b || busy || b.closest("#goal-tiers")) return;
   const d = b.dataset;
   if (d.add) { adding = d.add; editing = null; render(); $(`[data-add-form="${d.add}"] input`)?.focus(); }
   else if (d.edit) { editing = d.edit; adding = null; render(); $(`[data-edit-form="${d.edit}"] textarea`)?.focus(); }
   else if (d.cancel !== undefined) { editing = null; render(); }
-  else if (d.groupAdd !== undefined) { groupAdding = true; groupEditing = null; render(); $('[data-group-form="new"] input')?.focus(); }
+  else if (d.groupAdd) { groupAdding = d.groupAdd; groupEditing = null; render(); $(`[data-group-form="new:${d.groupAdd}"] input`)?.focus(); }
+  else if (d.groupAll) {
+    const ids = groupsOf(focus.id, d.groupAll).map((x) => x.id), close = !ids.every((id) => collapsed.has(id));
+    for (const id of ids) close ? collapsed.add(id) : collapsed.delete(id);
+    saveCollapsed();
+    render();
+  }
   else if (d.groupEdit) { groupEditing = d.groupEdit; groupAdding = false; render(); $(`[data-group-form="${d.groupEdit}"] input`)?.focus(); }
-  else if (d.groupCancel !== undefined) { groupAdding = groupEditing = null; render(); }
-  else if (d.groupToggle) { collapsed.has(d.groupToggle) ? collapsed.delete(d.groupToggle) : collapsed.add(d.groupToggle); render(); }
-  else if (d.groupRemove && confirm("Удалить группу? Желания из неё останутся, просто без группы.")) update((list, groups) => {
+  else if (d.groupCancel !== undefined) { groupAdding = false; groupEditing = null; render(); }
+  else if (d.groupToggle) toggleGroup(d.groupToggle);
+  else if (d.groupRemove && confirm(GROUP_TEXT[groupKind(state.wishGroups.find((x) => x.id === d.groupRemove))].remove)) update((list, groups) => {
     groups.splice(groups.findIndex((x) => x.id === d.groupRemove), 1);
     for (const g of list) if (g.groupId === d.groupRemove) delete g.groupId;
   });
@@ -206,9 +241,10 @@ main.addEventListener("submit", async (e) => {
   const f = e.target, data = new FormData(f), text = String(data.get("text") || data.get("name") || "").trim();
   if (!text) return;
   if (f.dataset.groupForm) {
-    const id = f.dataset.groupForm, name = text;
-    groupAdding = groupEditing = null;
-    if (id === "new") await update((list, groups) => groups.push({ id: crypto.randomUUID(), sphereId: focus.id, name }));
+    const id = f.dataset.groupForm, name = text, kind = id.startsWith("new:") ? id.slice(4) : "";
+    groupAdding = false;
+    groupEditing = null;
+    if (kind) await update((list, groups) => groups.push({ id: crypto.randomUUID(), sphereId: focus.id, name, ...(kind === "wish" ? {} : { kind }) }));
     else await update((list, groups) => (groups.find((x) => x.id === id).name = name));
     return;
   }
