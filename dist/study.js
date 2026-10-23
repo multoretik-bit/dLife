@@ -17,7 +17,7 @@ const external = (href) => `href="${esc(href)}" target="_blank" rel="noopener no
 /** Блок «Инструменты» на странице сферы: библиотека, английский и история для учёбы, ссылки — для остальных сфер. */
 export function mountStudy({ root, sphereId, getState, save, getBackend }) {
   const study = sphereId === '10';
-  const tabs = study ? [['library', 'Библиотека'], ['english', 'Английский'], ['history', 'История']] : [];
+  const tabs = study ? [['library', 'Библиотека'], ['english', 'Языки'], ['history', 'История']] : [];
   let view = study ? 'library' : 'resources', shelf = 'reading', linking = null, query = '', category = '', page = 0, pending = false, shelfOpen = false;
 
   root.className = 'sp-card study-hub';
@@ -279,11 +279,11 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
     return u.href;
   }
 
-  /* ---------- Английский и история ---------- */
+  /* ---------- Языки и история ---------- */
   function renderEnglish() {
     body.innerHTML = `<div class="tool-grid">
       <a class="tool-card tool-words" ${external(DLANG_URL)}>
-        <span class="tool-badge">Aa</span><strong>Учить слова</strong><span>dLang — 10 000 английских слов</span>${ARROW}</a>
+        <span class="tool-badge">Aa</span><strong>Учить слова</strong><span>dLang — английский и испанский</span>${ARROW}</a>
       <a class="tool-card tool-griffins" ${external(VIDEO_URL)}>
         <span class="tool-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5z"/></svg></span><strong>Язык через «Гриффинов»</strong><span>Смотреть серии на английском</span>${ARROW}</a>
     </div>`;

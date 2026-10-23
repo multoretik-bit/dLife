@@ -1,6 +1,6 @@
 import { CATALOG, CATALOG_VERSION, restructure } from './library-catalog.js';
 export const VIDEO_URL = 'https://kinogomy.net/cartoons/555-griffiny-hd-mvisionstv13-v54.html';
-export const DLANG_URL = 'https://den-english-10000.tivishka.chatgpt.site';
+export const DLANG_URL = 'https://multoretik-bit.github.io/dlang/#/verbs';
 export const HISTORY_NOTION_URL = 'https://app.notion.com/p/24c8171a481c80cb8553e9ca2723c9c0';
 // Сохранённый список старой версии перекладывается в новый план чтения (один раз — до первой записи с новой версией).
 export function library(state) {
