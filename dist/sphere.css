@@ -392,3 +392,11 @@ a.sp-primary, a.lib-start { text-decoration: none; }
   .lib-work.is-next .lib-work-actions .lib-start { flex: 1; justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) { .lib-work.is-closing { animation: none; } }
+/* Отмена «прочитал» и «читаю» прямо в строке плана */
+.lib-revert { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--ink-2); font-size: 13px; font-weight: 700; white-space: nowrap; transition: background 0.2s, color 0.2s, border-color 0.2s; }
+.lib-revert svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.lib-revert:hover { border-color: var(--ink-2); background: var(--soft); color: var(--ink); }
+.lib-work.is-read .lib-revert { opacity: 0.7; }
+.lib-work.is-read:hover .lib-revert, .lib-revert:focus-visible { opacity: 1; }
+@media (hover: none) { .lib-work.is-read .lib-revert { opacity: 1; } }
+@media (max-width: 760px) { .lib-work-actions .lib-revert { flex: 1; justify-content: center; } }

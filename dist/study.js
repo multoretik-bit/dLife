@@ -8,6 +8,7 @@ const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 
 const TRASH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/></svg>';
 const PEN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Zm9-13 4 4"/></svg>';
 const BOOK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5v-15ZM4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></svg>';
+const UNDO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>';
 const ARROW = '<svg class="tool-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>';
 const tone = (cats, c) => PALETTE[Math.max(0, cats.indexOf(c)) % PALETTE.length];
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -226,7 +227,9 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
     const row = (b, next) => `<li class="lib-work is-${b.status}${next ? ' is-next' : ''}" data-book="${esc(b.id)}">
         <span class="lib-mark" aria-hidden="true">${b.status === 'read' ? CHECK : b.status === 'reading' ? BOOK : ''}</span>
         <div class="lib-work-title"><strong>${esc(b.title)}</strong>${b.year ? `<small>${esc(b.year)}</small>` : ''}${next ? '<em>Следующая</em>' : ''}${b.status === 'reading' ? '<em class="is-reading">Читаю</em>' : ''}</div>
-        ${b.status === 'planned' ? `<div class="lib-work-actions">${bookActions(b)}</div>` : ''}
+        ${b.status === 'planned' ? `<div class="lib-work-actions">${bookActions(b)}</div>` : live() ? '' : `<div class="lib-work-actions">${b.status === 'read'
+          ? `<button class="lib-revert" data-unread="${esc(b.id)}" title="Отметил по ошибке — вернуть в план">${UNDO}Не прочитал</button>`
+          : `<button class="lib-revert" data-set-status="${esc(b.id)}" data-value="planned" title="Убрать из «Читаю сейчас»">${UNDO}Отложить</button>`}</div>`}
       </li>`;
     list.innerHTML = `<p class="lib-plan-note" style="--tone:${tone}">${eras.length > 1 ? 'Эпохи и авторы идут в том порядке, в котором их удобнее читать. Внутри автора — книги по порядку.' : 'Авторы и книги идут в порядке чтения.'}</p>` + eras.map((era) => {
       const key = `${category}|${era.name}`, open = key in eraToggles ? eraToggles[key] : era.name === firstOpen;
@@ -322,9 +325,9 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
     else if (d.page) { page += Number(d.page); drawBooks(); body.querySelector('.lib-toolbar').scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' }); }
     else if (d.markRead) await moveBook(d.markRead, b.closest('[data-book]'), 'read', '✓', 'прочитана');
     else if (d.start) await moveBook(d.start, b.closest('[data-book]'), 'reading', '📖', 'теперь в «Читаю сейчас»');
-    else if (d.setStatus) { if (await commit((s) => (s.books.find((x) => x.id === d.setStatus).status = d.value))) renderLibrary(); }
+    else if (d.setStatus) { if (await commit((s) => (s.books.find((x) => x.id === d.setStatus).status = d.value))) { renderLibrary(); if (d.value === 'planned') status.textContent = 'Книга вернулась в план чтения.'; } }
     else if (d.undo) { if (await commit((s) => (s.books.find((x) => x.id === d.undo).status = d.prev))) { renderLibrary(); status.textContent = 'Вернул как было.'; } }
-    else if (d.unread) { if (await commit((s) => (s.books.find((x) => x.id === d.unread).status = 'planned'))) { renderLibrary(); status.textContent = 'Книга вернулась в «Осталось прочитать».'; } }
+    else if (d.unread) { if (await commit((s) => (s.books.find((x) => x.id === d.unread).status = 'planned'))) { renderLibrary(); status.textContent = 'Книга вернулась в план чтения.'; } }
     else if (d.link) { linking = d.link; renderLibrary(); }
     else if (d.linkCancel !== undefined) { linking = null; renderLibrary(); }
     else if (d.removeBook) {
