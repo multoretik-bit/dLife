@@ -322,3 +322,73 @@ a.sp-primary, a.lib-start { text-decoration: none; }
   .study-book, .lib-now, .is-closing, .is-closing::after, .sp-toast, .lib-live, .hp-crown { animation: none; }
   .study-book:hover, .tool-card:hover { transform: none; }
 }
+
+/* ---------- План чтения: разделы → эпохи → авторы по порядку → книги ---------- */
+.lib-sections { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.lib-section { --tone: #e9a23b; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 6px 8px 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--ink-2); font-size: 14px; font-weight: 700; transition: background 0.2s, border-color 0.2s, color 0.2s; }
+.lib-section small { padding: 2px 8px; border-radius: 999px; background: var(--soft); color: var(--muted); font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.lib-section:hover { border-color: color-mix(in srgb, var(--tone) 50%, var(--line)); color: var(--ink); }
+.lib-section[aria-selected="true"] { border-color: var(--tone); background: color-mix(in srgb, var(--tone) 14%, #fff); color: var(--ink); }
+.lib-section[aria-selected="true"] small { background: #fff; color: var(--ink); }
+
+.lib-plan { display: grid; gap: 12px; }
+.lib-plan-note { margin: 0; color: var(--muted); font-size: 13.5px; font-weight: 600; }
+.lib-era { --tone: #e9a23b; border: 1px solid var(--line); border-left: 5px solid var(--tone); border-radius: 20px; background: #fff; box-shadow: 0 1px 2px rgba(15, 42, 64, 0.04); }
+.lib-era > summary { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; padding: 16px 18px; cursor: pointer; list-style: none; border-radius: 16px; transition: background 0.2s; }
+.lib-era > summary::-webkit-details-marker { display: none; }
+.lib-era > summary::before { content: ""; flex: none; width: 9px; height: 9px; border-right: 2.4px solid var(--ink-2); border-bottom: 2.4px solid var(--ink-2); transform: rotate(-45deg); transition: transform 0.2s var(--ease); margin-right: 2px; }
+.lib-era[open] > summary::before { transform: rotate(45deg) translate(-2px, -2px); }
+.lib-era > summary:hover { background: var(--soft); }
+.lib-era-name { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; color: var(--ink); }
+.lib-era-meta { flex: 1 1 180px; color: var(--muted); font-size: 13.5px; font-weight: 600; }
+.lib-era > summary b { margin-left: auto; padding: 3px 11px; border-radius: 999px; background: color-mix(in srgb, var(--tone) 14%, #fff); color: var(--ink); font-size: 13px; font-variant-numeric: tabular-nums; }
+.lib-how { margin: 0 18px 14px; padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--tone) 9%, #fff); color: var(--ink-2); font-size: 14.5px; line-height: 1.5; }
+.lib-how span { display: block; margin-bottom: 2px; color: color-mix(in srgb, var(--tone) 70%, var(--ink)); font-size: 11.5px; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; }
+
+.lib-authors { counter-reset: author; display: grid; gap: 4px; margin: 0; padding: 0 18px 16px; list-style: none; }
+.lib-author { counter-increment: author; position: relative; padding: 12px 0 10px 44px; border-top: 1px solid var(--line); }
+.lib-author:first-child { border-top: 0; }
+.lib-author::before { content: counter(author); position: absolute; left: 0; top: 11px; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: color-mix(in srgb, var(--tone) 16%, #fff); color: var(--ink); font-size: 14px; font-weight: 800; }
+.lib-author header { display: flex; align-items: center; gap: 10px; min-height: 32px; }
+.lib-author h4 { margin: 0; font-size: 16.5px; font-weight: 800; letter-spacing: -0.2px; }
+.lib-author header small { color: var(--muted); font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.lib-tip { margin: 2px 0 6px; color: var(--ink-2); font-size: 13.5px; line-height: 1.45; }
+.lib-works { display: grid; gap: 2px; margin: 4px 0 0; padding: 0; list-style: none; }
+.lib-work { position: relative; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 8px; border-radius: 12px; transition: background 0.2s; }
+.lib-work:hover { background: var(--soft); }
+.lib-mark { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border: 2px solid #cfdbe5; border-radius: 50%; color: #fff; }
+.lib-mark svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.lib-work.is-read .lib-mark { border-color: #2fa58c; background: #2fa58c; }
+.lib-work.is-reading .lib-mark { border-color: var(--tone); background: var(--tone); }
+.lib-work.is-reading .lib-mark svg { stroke-width: 2.2; }
+.lib-work-title { display: flex; flex: 1; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }
+.lib-work-title strong { font-size: 15.5px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+.lib-work-title small { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.lib-work-title em { padding: 1px 9px; border-radius: 999px; background: var(--ink); color: #fff; font-size: 11.5px; font-style: normal; font-weight: 800; }
+.lib-work-title em.is-reading { background: var(--tone); color: var(--ink); }
+.lib-work.is-read .lib-work-title strong { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(47, 165, 140, 0.55); }
+.lib-work.is-next { background: color-mix(in srgb, var(--tone) 10%, #fff); }
+.lib-work-actions { display: flex; align-items: center; gap: 4px; flex: none; }
+.lib-work-actions .lib-start { min-height: 36px; padding: 6px 12px 6px 10px; font-size: 13px; }
+.lib-work-actions .sp-ghost { width: 36px; min-height: 36px; padding: 0; background: transparent; }
+.lib-work-actions .lib-icon { width: 36px; height: 36px; margin-left: 0; }
+.lib-work:not(.is-next) .lib-start { background: transparent; color: var(--ink-2); border: 1px solid var(--line); }
+.lib-work:not(.is-next) .lib-start:hover { background: var(--ink); color: #fff; }
+.lib-work.is-closing { pointer-events: none; animation: sp-close 0.42s var(--ease) forwards; }
+
+@media (max-width: 760px) {
+  .lib-sections { flex-wrap: nowrap; overflow-x: auto; margin: 0 -4px 14px; padding: 0 4px 4px; scrollbar-width: none; }
+  .lib-sections::-webkit-scrollbar { display: none; }
+  .lib-section { flex: none; }
+  .lib-era > summary { padding: 14px 12px; }
+  .lib-era-name { font-size: 16.5px; }
+  .lib-how { margin: 0 12px 12px; font-size: 14px; }
+  .lib-authors { padding: 0 10px 12px; }
+  .lib-author { padding-left: 38px; }
+  .lib-author::before { width: 26px; height: 26px; font-size: 13px; }
+  .lib-work { flex-wrap: wrap; padding: 8px 6px; }
+  .lib-work-actions { width: 100%; padding-left: 34px; }
+  .lib-work:not(.is-next) .lib-work-actions .lib-start { flex: 1; justify-content: center; }
+  .lib-work.is-next .lib-work-actions .lib-start { flex: 1; justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) { .lib-work.is-closing { animation: none; } }

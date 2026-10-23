@@ -1,4 +1,5 @@
-// Catalog imported from Denis's library on 2026-10-06. Categories preserve the source.
+// Исходный импорт библиотеки Дениса (2026-10-06). Порядок строк задаёт постоянные id library-N — его не менять.
+import { SECTIONS } from "./library-plan.js";
 const groups = {
 "Русские книги": `Мастер и Маргарита|Михаил Булгаков|1967
 Преступление и наказание|Фёдор Достоевский|1866
@@ -211,22 +212,42 @@ Unfu*k Yourself. Парься меньше, живи больше|Гэри Дж�
 };
 const BASE = Object.entries(groups).flatMap(([category, lines]) => lines.split('\n').map(line => {const [title,author,year='']=line.split('|');return {title,author,year,category};})).map((b,i)=>({...b,id:`library-${i+1}`,status:'planned',notes:''}));
 
-// Книги, добавленные после первого импорта. У них постоянные id, чтобы не сдвигать номера исходного каталога.
-export const ADDITIONS = [
+// Книги, добавленные после первого импорта (каталог v2). У них постоянные id.
+const ADDITIONS = [
   {id:'library-bible',title:'Библия',author:'',year:'',category:'Мировая классика',status:'planned',notes:''},
   {id:'library-spqr',title:'SPQR. История Древнего Рима',author:'Мэри Бирд',year:'2015',category:'История',status:'planned',notes:''},
 ];
-export const CATALOG_VERSION = 2;
+const LEGACY = new Map([...BASE.map(b => [b.title, {...b, since: 1}]), ...ADDITIONS.map(b => [b.title, {...b, since: 2}])]);
 
-/** Добавляет недостающие книги из ADDITIONS, каждую — в конец своей категории. */
-export function withAdditions(books) {
-  const result = [...books];
-  for (const book of ADDITIONS) {
-    if (result.some(b => b.id === book.id)) continue;
-    const last = result.findLastIndex(b => b.category === book.category);
-    result.splice(last < 0 ? result.length : last + 1, 0, {...book});
+// v3: книги разложены по плану чтения — раздел → эпоха → автор → книги по порядку.
+export const CATALOG_VERSION = 3;
+const hash = (s) => { let h = 5381; for (const c of s) h = (Math.imul(h, 33) ^ c.codePointAt(0)) >>> 0; return h.toString(36); };
+
+/** Все книги плана по порядку чтения; since — версия каталога, в которой книга появилась. */
+export const PLAN = SECTIONS.flatMap(section => section.eras.flatMap(era => era.authors.flatMap(author => author.books.map(line => {
+  const [title, year = ''] = line.split('|'), old = LEGACY.get(title);
+  return {id: old?.id || `lib3-${hash(`${title}|${author.name}`)}`, title, author: author.name, year: year || old?.year || '', category: section.name, era: era.name, status: 'planned', notes: '', since: old?.since || 3};
+}))));
+
+export const CATALOG = PLAN.map(({since, ...book}) => book);
+
+const titleKey = (t) => String(t).toLocaleLowerCase('ru').replace(/ё/g, 'е').replace(/[«»"“”'’.,!?…:]/g, '').replace(/\s+/g, ' ').trim();
+
+/**
+ * Переносит сохранённый список (каталог версии fromVersion) в план чтения:
+ * статус, заметки и ссылку на конспект книги сохраняет, удалённые книги не возвращает,
+ * новые книги плана добавляет, а свои книги пользователя оставляет в конце со своими категориями.
+ * Если пользователь сам добавил книгу, которая теперь есть в плане, она встаёт на место из плана.
+ */
+export function restructure(books, fromVersion = 1) {
+  const mine = new Map(books.map(b => [b.id, b])), placed = new Set(), result = [];
+  const ownByTitle = new Map(books.filter(b => !b.id.startsWith('library-')).map(b => [titleKey(b.title), b]));
+  for (const {since, ...plan} of PLAN) {
+    const own = mine.get(plan.id) || (since > fromVersion ? ownByTitle.get(titleKey(plan.title)) : undefined);
+    if (own && !placed.has(own.id)) {
+      placed.add(own.id);
+      result.push({...own, title: plan.title, author: plan.author, year: plan.year, category: plan.category, era: plan.era});
+    } else if (!own && since > fromVersion) result.push(plan);
   }
-  return result;
+  return [...result, ...books.filter(b => !placed.has(b.id))];
 }
-
-export const CATALOG = withAdditions(BASE);

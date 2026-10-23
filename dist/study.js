@@ -1,5 +1,5 @@
 import { library, changeStudy, safeURL, VIDEO_URL, DLANG_URL, HISTORY_NOTION_URL } from './study-model.js';
-import { CATALOG } from './library-catalog.js';
+import { ERA_HOW, AUTHOR_TIP } from './library-plan.js';
 import { escapeHTML as esc } from './development.js';
 
 const PALETTE = ['#e9a23b', '#4f7fe0', '#d9605a', '#8a63d2', '#2fa58c', '#c7843a', '#3a9fd0', '#e0679a', '#5aa652', '#7b8ccc', '#c4a03a'];
@@ -9,7 +9,6 @@ const TRASH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7
 const PEN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Zm9-13 4 4"/></svg>';
 const BOOK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5v-15ZM4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></svg>';
 const ARROW = '<svg class="tool-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>';
-const categories = (books) => [...new Set([...CATALOG, ...books].map((b) => b.category))];
 const tone = (cats, c) => PALETTE[Math.max(0, cats.indexOf(c)) % PALETTE.length];
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const external = (href) => `href="${esc(href)}" target="_blank" rel="noopener noreferrer"`;
@@ -54,7 +53,7 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
   const notion = { state: 'loading', books: [], title: '', url: '', fetchedAt: null, error: '' };
   const live = () => notion.state === 'ok';
   const allBooks = () => (live() ? notion.books : library(getState()));
-  const bookCategories = (books) => (live() ? [...new Set(books.map((b) => b.category).filter(Boolean))] : categories(books));
+  const bookCategories = (books) => [...new Set(books.map((b) => b.category || 'Мои книги'))];
 
   async function syncNotion() {
     if (!study) return;
@@ -110,7 +109,7 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
       <div class="lib-head"><h3>Читаю сейчас${reading.length ? ` <span>${reading.length}</span>` : ''}</h3>${progressPill(books)}</div>
       <div class="lib-reading">${reading.map((b) => `
         <article class="lib-now" data-book="${esc(b.id)}" style="--tone:${tone(cats, b.category)}">
-          ${b.category ? `<span class="study-category">${esc(b.category)}</span>` : ''}
+          ${b.category ? `<span class="study-category">${esc(b.category)}${b.era ? ' · ' + esc(shortEra(b.era)) : ''}</span>` : ''}
           <h4>${esc(b.title)}</h4>
           <p>${esc(b.author)}${b.year ? ' · ' + esc(b.year) : ''}</p>
           ${notionButton(b)}
@@ -121,70 +120,130 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
         </article>`).join('') || `<div class="lib-empty"><strong>Сейчас ничего не читаешь</strong><p>${live() ? 'Поставь книге статус «Читаю» в Notion — она появится здесь.' : 'Выбери следующую книгу из списка «Осталось прочитать».'}</p></div>`}
       </div>
       ${live() && reading.length ? '<p class="lib-hint">Отметь книгу прочитанной в Notion — здесь она обновится сама.</p>' : ''}
-      <button class="lib-next" data-shelf="queue"><span><small>Дальше по списку</small>Осталось прочитать</span><b>${left}</b>${ARROW}</button>
+      <button class="lib-next" data-shelf="queue"><span><small>Разделы · эпохи · авторы по порядку</small>План чтения — осталось</span><b>${left}</b>${ARROW}</button>
       <div class="lib-shelf"></div>`;
     drawShelf();
     body.querySelector('.lib-link-form input')?.focus();
   }
 
+  // Эпохи, которые пользователь сам открыл или закрыл, запоминаются на устройстве; остальные — по умолчанию.
+  const ERA_KEY = 'dlife-lib-eras';
+  const eraToggles = (() => { try { return JSON.parse(localStorage.getItem(ERA_KEY) || '{}'); } catch { return {}; } })();
+  const saveEras = () => { try { localStorage.setItem(ERA_KEY, JSON.stringify(eraToggles)); } catch {} };
+  const sectionsOf = (books) => [...new Set(books.map((b) => b.category || 'Мои книги'))];
+  const eraOf = (b) => b.era || (live() ? 'Книги' : 'Мои книги');
+  const shortEra = (era) => String(era || '').split(' · ')[0];
+  const done = (list) => list.filter((b) => b.status === 'read').length;
+
+  /** Книги раздела: эпохи по порядку, внутри — авторы подряд, как в плане. */
+  function plan(books, section) {
+    const eras = [];
+    for (const b of books.filter((x) => (x.category || 'Мои книги') === section)) {
+      const name = eraOf(b);
+      let era = eras.find((e) => e.name === name);
+      if (!era) eras.push((era = { name, authors: [], books: [] }));
+      era.books.push(b);
+      const last = era.authors.at(-1);
+      if (last && last.name === b.author) last.books.push(b); else era.authors.push({ name: b.author, books: [b] });
+    }
+    return eras;
+  }
+
   function renderQueue() {
-    const books = allBooks(), cats = bookCategories(books), left = books.filter((b) => b.status === 'planned').length;
-    if (category && !cats.includes(category)) category = '';
+    const books = allBooks(), sections = sectionsOf(books), left = books.filter((b) => b.status === 'planned').length;
+    if (!sections.includes(category)) category = sections.find((s) => books.some((b) => (b.category || 'Мои книги') === s && b.status === 'planned')) || sections[0] || '';
     body.innerHTML = `
       ${syncBadge()}
-      <div class="lib-head"><button class="lib-back" data-shelf="reading">← Читаю сейчас</button><h3>Осталось прочитать <span>${left}</span></h3>
+      <div class="lib-head"><button class="lib-back" data-shelf="reading">← Читаю сейчас</button><h3>План чтения <span>${left}</span></h3>
         ${live() ? `<a class="sp-primary" ${external(notion.url)}>＋ Добавить в Notion</a>` : '<button class="sp-primary" data-action="new-book">＋ Добавить книгу</button>'}</div>
       ${live() ? '' : `<form id="book-form" class="study-form" hidden>
         <div><label for="book-title">Название</label><input id="book-title" name="title" maxlength="250" required></div>
         <div><label for="book-author">Автор</label><input id="book-author" name="author" maxlength="250"></div>
-        <div><label for="book-category">Категория</label><input id="book-category" name="category" list="book-categories" value="Мои книги" maxlength="100" required>
-          <datalist id="book-categories">${cats.map((c) => `<option value="${esc(c)}">`).join('')}</datalist></div>
+        <div><label for="book-category">Раздел</label><input id="book-category" name="category" list="book-categories" value="${esc(category || 'Мои книги')}" maxlength="100" required>
+          <datalist id="book-categories">${sections.map((c) => `<option value="${esc(c)}">`).join('')}</datalist></div>
         <div><label for="book-year">Год, если известен</label><input id="book-year" name="year" maxlength="60"></div>
         <div class="wide"><button class="sp-primary">Добавить в список</button> <button type="button" class="sp-ghost" data-action="cancel-book">Отмена</button></div>
       </form>`}
       <div class="lib-toolbar">
         <div class="lib-search"><label for="book-search" class="sp-sr">Поиск книги или автора</label>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input id="book-search" type="search" value="${esc(query)}" placeholder="Найти книгу или автора"></div>
-        ${cats.length > 1 ? `<div class="lib-cat"><label for="category-filter" class="sp-sr">Категория</label>
-          <select id="category-filter"><option value="">Все категории</option>${cats.map((c) => `<option ${category === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>` : ''}
+          <input id="book-search" type="search" value="${esc(query)}" placeholder="Найти книгу или автора во всех разделах"></div>
       </div>
-      <div class="study-books"></div><div class="study-pager"></div>`;
+      <div class="lib-sections" role="tablist" aria-label="Разделы библиотеки"></div>
+      <div class="study-books" data-books></div><div class="study-pager"></div>`;
     drawBooks();
     body.querySelector('#book-search').oninput = (e) => { query = e.target.value; page = 0; drawBooks(); };
-    const select = body.querySelector('#category-filter');
-    if (select) select.onchange = (e) => { category = e.target.value; page = 0; drawBooks(); };
     const form = body.querySelector('#book-form');
     if (form) form.onsubmit = async (e) => {
       e.preventDefault();
       const d = new FormData(e.target);
       const book = { id: crypto.randomUUID(), title: d.get('title').trim(), author: d.get('author').trim(), category: d.get('category').trim() || 'Мои книги', year: d.get('year').trim(), status: 'planned', notes: '' };
-      if (book.title && await commit((s) => s.books.unshift(book))) { query = category = ''; page = 0; renderLibrary(); }
+      if (book.title && await commit((s) => s.books.push(book))) { query = ''; category = book.category; page = 0; renderLibrary(); }
     };
   }
 
+  const bookActions = (b) => live()
+    ? `<a class="lib-start" ${external(b.url)}><span class="lib-n">N</span>Открыть в Notion</a>`
+    : `<button class="lib-start" data-start="${esc(b.id)}">${BOOK}Начать читать</button>
+       <button class="sp-ghost" data-mark-read="${esc(b.id)}" title="Уже прочитал" aria-label="Уже прочитал «${esc(b.title)}»">${CHECK}</button>
+       <button class="lib-icon" data-remove-book="${esc(b.id)}" aria-label="Удалить ${esc(b.title)}" title="Удалить из списка">${TRASH}</button>`;
+
   function drawBooks() {
-    const books = allBooks(), cats = bookCategories(books), q = query.toLocaleLowerCase('ru');
-    const list = books.filter((b) => b.status === 'planned' && (!category || b.category === category) && `${b.title} ${b.author}`.toLocaleLowerCase('ru').includes(q));
-    const pages = Math.ceil(list.length / PAGE);
-    page = Math.min(page, Math.max(0, pages - 1));
-    const actions = (b) => live()
-      ? `<a class="lib-start" ${external(b.url)}><span class="lib-n">N</span>Открыть в Notion</a>`
-      : `<button class="lib-start" data-start="${esc(b.id)}">${BOOK}Начать читать</button>
-         <button class="sp-ghost" data-mark-read="${esc(b.id)}" title="Уже прочитал">${CHECK}</button>
-         <button class="lib-icon" data-remove-book="${esc(b.id)}" aria-label="Удалить ${esc(b.title)}" title="Удалить из списка">${TRASH}</button>`;
-    body.querySelector('.study-books').innerHTML = list.length
-      ? list.slice(page * PAGE, (page + 1) * PAGE).map((b) => `
-        <article class="study-book" data-book="${esc(b.id)}" style="--tone:${tone(cats, b.category)}">
-          ${b.category ? `<span class="study-category">${esc(b.category)}</span>` : ''}
-          <h3>${esc(b.title)}</h3>
-          <p>${esc(b.author)}${b.year ? ' · ' + esc(b.year) : ''}</p>
-          <div class="study-book-actions">${actions(b)}</div>
-        </article>`).join('')
-      : `<div class="lib-empty"><strong>${books.some((b) => b.status === 'planned') ? 'Ничего не нашлось' : 'Список пуст 🎉'}</strong><p>${books.some((b) => b.status === 'planned') ? 'Измени поиск или категорию.' : live() ? 'Добавь новые книги в Notion.' : 'Добавь новую книгу.'}</p></div>`;
-    body.querySelector('.study-pager').innerHTML = pages > 1
-      ? `<button data-page="-1" ${page === 0 ? 'disabled' : ''} aria-label="Назад">←</button><span>${page + 1} / ${pages}</span><button data-page="1" ${page + 1 >= pages ? 'disabled' : ''} aria-label="Далее">→</button>`
-      : '';
+    const books = allBooks(), sections = sectionsOf(books), q = query.trim().toLocaleLowerCase('ru');
+    const tabs = body.querySelector('.lib-sections'), list = body.querySelector('[data-books]'), pager = body.querySelector('.study-pager');
+    tabs.hidden = !!q;
+    tabs.innerHTML = sections.map((s, i) => {
+      const own = books.filter((b) => (b.category || 'Мои книги') === s);
+      return `<button role="tab" class="lib-section" data-section="${esc(s)}" aria-selected="${s === category}" style="--tone:${PALETTE[i % PALETTE.length]}"><span>${esc(s)}</span><small>${done(own)}/${own.length}</small></button>`;
+    }).join('');
+
+    // Поиск — плоский список по всем разделам.
+    if (q) {
+      const found = books.filter((b) => b.status === 'planned' && `${b.title} ${b.author}`.toLocaleLowerCase('ru').includes(q));
+      const pages = Math.ceil(found.length / PAGE);
+      page = Math.min(page, Math.max(0, pages - 1));
+      list.className = 'study-books';
+      list.innerHTML = found.length
+        ? found.slice(page * PAGE, (page + 1) * PAGE).map((b) => `
+          <article class="study-book" data-book="${esc(b.id)}" style="--tone:${PALETTE[Math.max(0, sections.indexOf(b.category)) % PALETTE.length]}">
+            <span class="study-category">${esc(b.category)}${b.era ? ' · ' + esc(shortEra(b.era)) : ''}</span>
+            <h3>${esc(b.title)}</h3>
+            <p>${esc(b.author)}${b.year ? ' · ' + esc(b.year) : ''}</p>
+            <div class="study-book-actions">${bookActions(b)}</div>
+          </article>`).join('')
+        : `<div class="lib-empty"><strong>Ничего не нашлось</strong><p>Измени запрос — поиск идёт по всем разделам.</p></div>`;
+      pager.innerHTML = pages > 1
+        ? `<button data-page="-1" ${page === 0 ? 'disabled' : ''} aria-label="Назад">←</button><span>${page + 1} / ${pages}</span><button data-page="1" ${page + 1 >= pages ? 'disabled' : ''} aria-label="Далее">→</button>`
+        : '';
+      return;
+    }
+
+    // План раздела: эпохи → авторы по порядку → книги по порядку.
+    pager.innerHTML = '';
+    list.className = 'lib-plan';
+    const tone = PALETTE[Math.max(0, sections.indexOf(category)) % PALETTE.length];
+    const eras = plan(books, category), firstOpen = eras.find((e) => e.books.some((b) => b.status !== 'read'))?.name;
+    const row = (b, next) => `<li class="lib-work is-${b.status}${next ? ' is-next' : ''}" data-book="${esc(b.id)}">
+        <span class="lib-mark" aria-hidden="true">${b.status === 'read' ? CHECK : b.status === 'reading' ? BOOK : ''}</span>
+        <div class="lib-work-title"><strong>${esc(b.title)}</strong>${b.year ? `<small>${esc(b.year)}</small>` : ''}${next ? '<em>Следующая</em>' : ''}${b.status === 'reading' ? '<em class="is-reading">Читаю</em>' : ''}</div>
+        ${b.status === 'planned' ? `<div class="lib-work-actions">${bookActions(b)}</div>` : ''}
+      </li>`;
+    list.innerHTML = `<p class="lib-plan-note" style="--tone:${tone}">${eras.length > 1 ? 'Эпохи и авторы идут в том порядке, в котором их удобнее читать. Внутри автора — книги по порядку.' : 'Авторы и книги идут в порядке чтения.'}</p>` + eras.map((era) => {
+      const key = `${category}|${era.name}`, open = key in eraToggles ? eraToggles[key] : era.name === firstOpen;
+      const next = era.books.find((b) => b.status === 'planned');
+      const how = ERA_HOW.get(key);
+      return `<details class="lib-era" data-era="${esc(key)}" style="--tone:${tone}" ${open ? 'open' : ''}>
+        <summary><span class="lib-era-name">${esc(era.name)}</span><span class="lib-era-meta">${next ? `Дальше: «${esc(next.title)}»` : done(era.books) === era.books.length ? 'Всё прочитано ✓' : ''}</span><b>${done(era.books)}/${era.books.length}</b></summary>
+        ${how ? `<p class="lib-how"><span>Как изучать</span>${esc(how)}</p>` : ''}
+        <ol class="lib-authors">${era.authors.map((author) => {
+          const tip = AUTHOR_TIP.get(`${key}|${author.name}`);
+          return `<li class="lib-author"><header><h4>${esc(author.name || author.books[0].title)}</h4><small>${done(author.books)}/${author.books.length}</small></header>
+            ${tip ? `<p class="lib-tip">${esc(tip)}</p>` : ''}
+            <ol class="lib-works">${author.books.map((b) => row(b, b === next)).join('')}</ol></li>`;
+        }).join('')}</ol>
+      </details>`;
+    }).join('');
+    list.querySelectorAll('.lib-era').forEach((d) => d.addEventListener('toggle', () => { eraToggles[d.dataset.era] = d.open; saveEras(); }));
   }
 
   function drawShelf() {
@@ -259,9 +318,10 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
     const d = b.dataset;
     if (d.tab) { view = d.tab; status.textContent = ''; render(); }
     else if (d.shelf) { shelf = d.shelf; linking = null; status.textContent = ''; renderLibrary(); root.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' }); }
+    else if (d.section) { category = d.section; page = 0; drawBooks(); body.querySelector('.lib-sections').scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'nearest' }); }
     else if (d.page) { page += Number(d.page); drawBooks(); body.querySelector('.lib-toolbar').scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' }); }
-    else if (d.markRead) await moveBook(d.markRead, b.closest('article'), 'read', '✓', 'прочитана');
-    else if (d.start) await moveBook(d.start, b.closest('article'), 'reading', '📖', 'теперь в «Читаю сейчас»');
+    else if (d.markRead) await moveBook(d.markRead, b.closest('[data-book]'), 'read', '✓', 'прочитана');
+    else if (d.start) await moveBook(d.start, b.closest('[data-book]'), 'reading', '📖', 'теперь в «Читаю сейчас»');
     else if (d.setStatus) { if (await commit((s) => (s.books.find((x) => x.id === d.setStatus).status = d.value))) renderLibrary(); }
     else if (d.undo) { if (await commit((s) => (s.books.find((x) => x.id === d.undo).status = d.prev))) { renderLibrary(); status.textContent = 'Вернул как было.'; } }
     else if (d.unread) { if (await commit((s) => (s.books.find((x) => x.id === d.unread).status = 'planned'))) { renderLibrary(); status.textContent = 'Книга вернулась в «Осталось прочитать».'; } }
