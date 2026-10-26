@@ -26,3 +26,21 @@ test("if 20:00–22:00 is taken, the subjects become all-day habits with their t
   assert.equal(next.blocks.length, 1);
   assert.ok(next.items.every((i) => i.blockId === "" && /^\d\d:\d\d$/.test(i.time)));
 });
+
+test("subjects that landed on the whole day move into Denis's study block, which grows to 20:00–22:00", async () => {
+  const { STUDY_MOVE_SEED } = await import("../dist/seeds.js");
+  // Как у Дениса: учебный блок уже стоял вечером, поэтому предметы встали «на весь день».
+  const base = { ...emptyState(), blocks: [{ id: "u1", name: "Учебный блок", start: "19:00", end: "21:00", sphereId: "10" }, { id: "u2", name: "Сон", start: "23:00", end: "07:00", sphereId: "6" }] };
+  const next = applySeeds(base);
+  assert.ok(validateState(next));
+  assert.ok(next.applied.includes(STUDY_MOVE_SEED));
+  assert.deepEqual(next.items.map((i) => `${i.time} ${i.blockId}`), ["20:00 u1", "20:30 u1", "21:00 u1"]);
+  assert.deepEqual([next.blocks[0].start, next.blocks[0].end], ["19:00", "22:00"], "блок дорос до 22:00");
+  assert.equal(applySeeds(next), null);
+  // Если расширение задело бы соседний блок — блок не трогаем, предметы всё равно внутри.
+  const tight = { ...emptyState(), blocks: [{ id: "u1", name: "Учёба", start: "19:00", end: "21:00", sphereId: "10" }, { id: "u3", name: "Ужин", start: "21:00", end: "22:00", sphereId: "4" }] };
+  const t = applySeeds(tight);
+  assert.ok(validateState(t));
+  assert.ok(t.items.every((i) => i.blockId === "u1"));
+  assert.equal(t.blocks[0].end, "21:00");
+});

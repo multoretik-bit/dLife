@@ -1,4 +1,4 @@
-import { validateBlock } from "./schedule.js";
+import { validateBlock, overlaps, minutes } from "./schedule.js";
 
 // Разовые добавления по просьбе Дениса. Каждое применяется один раз (id попадает в state.applied),
 // поэтому удалённое потом не возвращается.
@@ -12,8 +12,39 @@ const SUBJECTS = [
   { id: "study-english", name: "Английский — 60 минут", time: "21:00", minutes: 60, practice: "Английский", match: /англ/i },
 ];
 
-/** Возвращает состояние с добавленной вечерней учёбой или null, если она уже добавлялась. */
+/** Все разовые добавления по порядку. Возвращает новое состояние или null, если менять нечего. */
 export function applySeeds(state) {
+  const a = addEveningStudy(state), b = moveStudyIntoBlock(a || state);
+  return b || a;
+}
+
+// 26.10.2026 — предметы оказались «на весь день», потому что 20:00–22:00 уже занимал учебный блок Дениса:
+// переносим их в этот блок и при возможности расширяем его до 20:00–22:00.
+export const STUDY_MOVE_SEED = "study-into-block-2026-10-26";
+const isStudyBlock = (b) => b.sphereId === "10" || /уч/i.test(b.name);
+
+export function moveStudyIntoBlock(state) {
+  if (!state || (state.applied || []).includes(STUDY_MOVE_SEED)) return null;
+  const evening = { start: BLOCK.start, end: BLOCK.end };
+  const blocks = state.blocks || [];
+  const target = blocks.find((b) => isStudyBlock(b) && overlaps(b, evening)) || blocks.find((b) => isStudyBlock(b));
+  if (!target) return null;
+  const subjects = (i) => i.type === "habit" && (SUBJECTS.some((s) => s.id === i.id) || SUBJECTS.some((s) => s.name.toLowerCase() === i.name.trim().toLowerCase()));
+  if (!state.items.some((i) => subjects(i) && i.blockId !== target.id)) return null;
+  const next = structuredClone(state);
+  next.applied = [...(next.applied || []), STUDY_MOVE_SEED];
+  for (const i of next.items) if (subjects(i)) i.blockId = target.id;
+  // Блок должен вмещать 20:00–22:00 («2 часа полноценно»), если это не заденет соседние блоки.
+  const b = next.blocks.find((x) => x.id === target.id), [s, e] = [minutes(b.start), minutes(b.end)];
+  if (s < e) {
+    const wider = { ...b, start: s <= minutes(BLOCK.start) ? b.start : BLOCK.start, end: e >= minutes(BLOCK.end) ? b.end : BLOCK.end };
+    if (!validateBlock(wider, next.blocks)) Object.assign(b, wider);
+  }
+  return next;
+}
+
+/** Вечерняя учёба (один раз). null — уже добавлялась. */
+export function addEveningStudy(state) {
   if (!state || (state.applied || []).includes(STUDY_SEED)) return null;
   const next = structuredClone(state);
   next.applied = [...(next.applied || []), STUDY_SEED];
