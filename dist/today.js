@@ -1,18 +1,10 @@
 import { SPHERES, sphereFor, dateKey } from "./schedule.js";
 import { escapeHTML as esc, occurs, repeatOf, completionKey, itemDate, streak, shiftDate, setReward } from "./development.js";
-import { targets, dayTotals, weightStatus, WATER_GOAL } from "./nutrition-model.js";
 
-const fmt = (n) => new Intl.NumberFormat("ru-RU").format(Math.round(n));
 const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
 const SPHERE_KEY = "dlife-today-sphere";
-const ring = (value, max, color, label, sub, href) => {
-  const r = 26, c = 2 * Math.PI * r, pct = max ? Math.max(0, Math.min(1, value / max)) : 0;
-  return `<a class="td-ring${pct >= 1 ? " is-full" : ""}" href="${href}" style="--c:${color}">
-    <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="${r}" class="td-ring-track"/><circle cx="32" cy="32" r="${r}" class="td-ring-fill" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - pct)}"/></svg>
-    <span><b>${label}</b><small>${sub}</small></span></a>`;
-};
 
-/** «Сегодня» на главной: кольца дня, привычки и цели (задачи) на сегодня с отметкой в одно касание. */
+/** «Сегодня» на главной: привычки и цели (задачи) на сегодня с отметкой в одно касание. Показатели дня — в плитках (tiles.js). */
 export function mountToday({ root, getState, save }) {
   let busy = false, adding = false;
   const today = () => dateKey();
@@ -25,19 +17,8 @@ export function mountToday({ root, getState, save }) {
     const s = getState();
     if (!s) return;
     const hs = habits(s), ts = tasks(s);
-    const hDone = hs.filter((h) => isDone(s, h)).length, tDone = ts.filter((t) => isDone(s, t, today())).length;
-    const n = s.nutrition, ws = n?.profile ? weightStatus(n, today()) : null, t = n?.profile ? targets(n.profile, ws.current || n.profile.weight) : null;
-    const eaten = dayTotals(n, today()).k, water = n?.water?.[today()] || 0;
-    const all = hs.length + ts.length, doneAll = hDone + tDone;
 
     root.innerHTML = `
-      <div class="td-rings">
-        ${ring(hDone, hs.length, "#22b07d", hs.length ? `${hDone}/${hs.length}` : "—", "привычки", "#td-habits")}
-        ${ring(tDone, ts.length, "#3a8fe0", ts.length ? `${tDone}/${ts.length}` : "—", "цели дня", "#td-tasks")}
-        ${t ? ring(eaten, t.kcal, eaten > t.kcal * 1.05 ? "#ef5a4c" : "#f29b38", fmt(eaten), `из ${fmt(t.kcal)} ккал`, "/sphere/?id=2#nutrition") : ring(0, 1, "#f29b38", "Питание", "настроить норму", "/sphere/?id=2#nutrition")}
-        ${ring(water, WATER_GOAL, "#41b8e8", `${(water / 1000).toLocaleString("ru-RU")} л`, "вода из 2 л", "/sphere/?id=2#nutrition")}
-      </div>
-      ${all ? `<p class="td-day">${doneAll === all ? "🎉 Всё на сегодня сделано — отличный день." : `Сделано ${doneAll} из ${all}. ${doneAll ? "Продолжай в том же темпе." : "Начни с самого простого."}`}</p>` : ""}
       <div class="td-cols">
         <section class="td-card" id="td-habits" aria-labelledby="td-habits-title">
           <header><h2 id="td-habits-title">Привычки на сегодня</h2><a class="td-more" href="/now/">Все →</a></header>

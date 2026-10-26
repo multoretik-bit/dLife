@@ -1,10 +1,9 @@
 import {ScheduleStore} from './store.js';
 import {cloudClient,cloudConfig,configureCloud,cloudEnabled,cloudUser,joinSyncCode,codeSyncEnabled,savedSyncCode,disableCodeSync,dcapitalClient} from './cloud.js';
-import {goalStats} from './goals-model.js';
 import {dateKey,emptyState,validateState} from './schedule.js';
 import {coinTotal,normalize} from './development.js';
 import {mountToday} from './today.js';
-import {targets, dayTotals, weightStatus} from './nutrition-model.js';
+import {updateTiles, quickChange} from './tiles.js';
 
 const $ = s => document.querySelector(s), store = new ScheduleStore();
 let state = null, busy = false;
@@ -41,22 +40,8 @@ function plural(n, one, few, many) {
 
 function render() {
   if (!state) return;
-  $('#useful-value').textContent = state.logs.filter(l => l.date === dateKey()).reduce((n, l) => n + l.minutes, 0) + ' мин';
   $('#coin-balance').textContent = new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(coinTotal(state));
-  const n = state.nutrition;
-  if (n?.profile && $('#food-value')) {
-    const t = targets(n.profile, weightStatus(n, dateKey()).current || n.profile.weight), day = dayTotals(n, dateKey()), left = t.kcal - day.k;
-    $('#food-value').innerHTML = `${new Intl.NumberFormat('ru-RU').format(day.k)} <small>из ${new Intl.NumberFormat('ru-RU').format(t.kcal)} ккал</small>`;
-    $('#food-status').textContent = `${left >= 0 ? `Осталось ${left} ккал` : `Сверх нормы на ${-left} ккал`} · белок ${Math.round(day.p)} из ${t.p} г`;
-  }
-  const g = goalStats(state);
-  if (!g.total) {
-    $('#goals-value').textContent = '—';
-    $('#goals-status').textContent = 'Начни с маленького желания в любом аспекте';
-  } else {
-    $('#goals-value').innerHTML = `${g.wish.done + g.goal.done} <small>из ${g.wish.total + g.goal.total} выполнено</small>`;
-    $('#goals-status').textContent = `✨ ${g.wish.total} ${plural(g.wish.total, 'желание', 'желания', 'желаний')} · 🎯 ${g.goal.total} ${plural(g.goal.total, 'цель', 'цели', 'целей')} · 🔭 ${g.vision.total} в видении`;
-  }
+  updateTiles(state);
 }
 
 // Привычки и цели на сегодня отмечаются прямо на главной.
@@ -79,6 +64,18 @@ try {
 } catch (e) {
   $('#home-status').textContent = e.message;
 }
+
+// Быстрые кнопки на плитках: «＋ стакан» воды и «＋ 100 ккал» сожжённых.
+let quickBusy = false;
+$('.home-tiles')?.addEventListener('click', async e => {
+  const b = e.target.closest('[data-quick]');
+  if (!b || !state || quickBusy) return;
+  const next = quickChange(state, b.dataset.quick);
+  if (!next) return;
+  quickBusy = true;
+  b.disabled = true;
+  try { await saveToday(next); } finally { quickBusy = false; b.disabled = false; }
+});
 
 $('#export-data')?.addEventListener('click', async () => {
   try {
