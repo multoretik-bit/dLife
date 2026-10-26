@@ -435,3 +435,47 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
   .tile-sub { font-size: 12px; }
   .tile-btn { flex: 1; min-height: 34px; padding: 5px 8px; font-size: 12.5px; }
 }
+
+/* ---------- Еда по фото ---------- */
+.nt-photo-row { display: grid; grid-template-columns: 1.6fr 1fr; gap: 8px; }
+.nt-photo-btn { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 0 10px; min-height: 64px; padding: 10px 14px; border-radius: 16px; background: linear-gradient(135deg, #ff9a3c, #f26b3a); color: #fff; cursor: pointer; box-shadow: 0 8px 20px rgba(242, 107, 58, 0.28); transition: transform 0.15s, box-shadow 0.2s; }
+.nt-photo-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 26px rgba(242, 107, 58, 0.34); }
+.nt-photo-btn span { grid-row: 1 / 3; font-size: 26px; line-height: 1; }
+.nt-photo-btn b { font-size: 15.5px; }
+.nt-photo-btn small { font-size: 12px; opacity: 0.9; }
+.nt-photo-btn.is-light { background: var(--soft); color: var(--ink); box-shadow: none; border: 1px solid var(--line); }
+.nt-photo-btn.is-light span { grid-row: auto; }
+.nt-photo-btn:focus-within { outline: 3px solid var(--blue); outline-offset: 2px; }
+.nt-ai-photo { display: block; width: 100%; max-height: 240px; object-fit: cover; border-radius: 18px; background: var(--soft); }
+.nt-ai-loading { display: grid; justify-items: center; gap: 6px; padding: 18px 0 8px; color: var(--ink-2); }
+.nt-ai-loading i { width: 34px; height: 34px; border-radius: 50%; border: 3.5px solid #f6e1cc; border-top-color: var(--orange); animation: nt-spin 0.9s linear infinite; }
+.nt-ai-loading span { color: var(--muted); font-size: 13px; }
+@keyframes nt-spin { to { transform: rotate(360deg); } }
+.nt-ai-list { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.nt-ai-list li { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: 12px; transition: opacity 0.2s, background 0.2s; }
+.nt-ai-list li:hover { background: var(--soft); }
+.nt-ai-list li.is-off { opacity: 0.45; }
+.nt-ai-check { position: relative; flex: none; cursor: pointer; }
+.nt-ai-check input { position: absolute; opacity: 0; }
+.nt-ai-check span { display: grid; place-items: center; width: 26px; height: 26px; border: 2px solid #cfd5dc; border-radius: 8px; background: #fff; }
+.nt-ai-check input:checked + span { background: var(--orange); border-color: var(--orange); }
+.nt-ai-check input:checked + span::after { content: "✓"; color: #fff; font-weight: 800; font-size: 15px; }
+.nt-ai-check input:focus-visible + span { outline: 3px solid var(--blue); outline-offset: 2px; }
+.nt-ai-text { display: grid; flex: 1; min-width: 0; }
+.nt-ai-text strong { font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
+.nt-ai-text small { color: var(--muted); font-size: 12px; }
+.nt-ai-grams { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 13px; }
+.nt-ai-grams input { width: 74px; min-height: 38px; padding: 6px 8px; text-align: center; font-weight: 700; }
+.nt-ai-list li > b { min-width: 46px; text-align: right; font-size: 15px; font-variant-numeric: tabular-nums; }
+.nt-ai-error { margin: 4px 0; padding: 12px 14px; border-radius: 14px; background: #fff4f0; color: #9c3b18; font-size: 14px; line-height: 1.45; }
+.nt-ai-actions, .nt-ai-hint { display: flex; flex-wrap: wrap; gap: 8px; }
+.nt-ai-hint input { flex: 1 1 200px; min-width: 0; min-height: 42px; }
+.nt-ai-code { display: grid; gap: 8px; }
+.nt-ai-code p { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.45; }
+.nt-ai-code input { min-height: 46px; }
+.nt-ai-again { justify-self: start; cursor: pointer; }
+@media (max-width: 760px) {
+  .nt-photo-row { grid-template-columns: 1fr; }
+  .nt-ai-grams input { width: 62px; }
+}
+@media (prefers-reduced-motion: reduce) { .nt-ai-loading i { animation: none; } }

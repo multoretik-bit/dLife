@@ -19,8 +19,12 @@ export function mountNutrition({ before, getState, save }) {
   before.before(root);
 
   let day = dateKey(), adding = null, query = "", picked = null, grams = 0, setup = false, busy = false;
+  // Распознавание по фото: null или { status: loading|done|error|code, photo, items, note, error, hint }
+  let ai = null;
   const n = () => getState().nutrition || {};
   const today = () => dateKey();
+  const AI_CODE_KEY = "dlife-food-ai-code";
+  const aiCode = () => { try { return localStorage.getItem(AI_CODE_KEY) || ""; } catch { return ""; } };
 
   async function change(fn) {
     if (busy) return false;
@@ -86,6 +90,7 @@ export function mountNutrition({ before, getState, save }) {
 
   function addDialog(data) {
     const meal = MEALS.find((m) => m.id === adding);
+    if (ai) return aiDialog(meal);
     if (picked) {
       const f = picked, p = portion(f, grams || 0);
       const presets = [...new Set([f.portion, Math.round(f.portion / 2), f.portion * 2, 100].filter((g) => g > 0))].slice(0, 4);
@@ -103,7 +108,11 @@ export function mountNutrition({ before, getState, save }) {
     }
     return `<div class="nt-sheet" role="dialog" aria-label="Добавить в «${meal.name}»"><div class="nt-sheet-card">
       <header><h3>${meal.icon} ${meal.name}</h3><button type="button" class="nt-x" data-close aria-label="Закрыть">×</button></header>
-      <div class="nt-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="nt-search" type="search" value="${esc(query)}" placeholder="Гречка, яйцо, капучино…" autocomplete="off" aria-label="Поиск продукта"></div>
+      <div class="nt-photo-row">
+        <label class="nt-photo-btn"><input type="file" accept="image/*" capture="environment" data-photo hidden><span>📷</span><b>Сфотографировать</b><small>нейросеть посчитает калории</small></label>
+        <label class="nt-photo-btn is-light"><input type="file" accept="image/*" data-photo hidden><span>🖼️</span><b>Из галереи</b></label>
+      </div>
+      <div class="nt-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="nt-search" type="search" value="${esc(query)}" placeholder="Или найди в базе: гречка, яйцо…" autocomplete="off" aria-label="Поиск продукта"></div>
       <div class="nt-found">${found(data)}</div>
       <details class="nt-more"><summary>Быстро: только калории</summary>
         <form class="nt-quick-form" data-quick><input name="name" maxlength="80" placeholder="Что съел" aria-label="Название"><input name="k" type="number" inputmode="numeric" min="1" max="20000" placeholder="ккал" required aria-label="Калории"><input name="p" type="number" inputmode="decimal" min="0" max="2000" step="0.1" placeholder="белки, г" aria-label="Белки"><button class="sp-primary">Добавить</button></form>
@@ -181,6 +190,68 @@ export function mountNutrition({ before, getState, save }) {
       </form>`;
   }
 
+  /* ---------- Распознавание еды по фото ---------- */
+  const CONF = { high: "уверенно", medium: "примерно", low: "грубая оценка" };
+  // Значения блюда для текущих граммов: всё пропорционально оценке нейросети.
+  const scaled = (it) => { const x = it.g / it.grams; return { k: Math.round(it.kcal * x), p: Math.round(it.protein * x * 10) / 10, f: Math.round(it.fat * x * 10) / 10, c: Math.round(it.carbs * x * 10) / 10 }; };
+
+  function aiDialog(meal) {
+    const head = `<header><button type="button" class="nt-link" data-ai-close>← Назад</button><h3>📷 ${meal.name}</h3><button type="button" class="nt-x" data-close aria-label="Закрыть">×</button></header>`;
+    const photo = ai.photo ? `<img class="nt-ai-photo" src="${ai.photo}" alt="Фото еды">` : "";
+    let body = "";
+    if (ai.status === "loading") body = `<div class="nt-ai-loading"><i></i><b>Распознаю еду…</b><span>Обычно 5–15 секунд</span></div>`;
+    else if (ai.status === "code") body = `<form class="nt-ai-code" data-ai-code><p>Введи код доступа к распознаванию — тот, что задан в Vercel как <b>FOOD_AI_CODE</b>. Он запомнится на этом устройстве.</p><input name="code" type="password" required autocomplete="off" placeholder="Код доступа" aria-label="Код доступа"><button class="sp-primary">Продолжить</button>${ai.error ? `<p class="nt-ai-error">${esc(ai.error)}</p>` : ""}</form>`;
+    else if (ai.status === "error") body = `<p class="nt-ai-error">${esc(ai.error)}</p><div class="nt-ai-actions"><button type="button" class="sp-ghost" data-ai-retry>Попробовать ещё раз</button><button type="button" class="sp-ghost" data-ai-close>Найти в базе вручную</button></div>`;
+    else {
+      const on = ai.items.filter((it) => it.on), total = on.reduce((s, it) => s + scaled(it).k, 0);
+      body = ai.items.length ? `
+        <ul class="nt-ai-list">${ai.items.map((it, i) => { const v = scaled(it); return `<li class="${it.on ? "" : "is-off"}">
+          <label class="nt-ai-check"><input type="checkbox" data-ai-on="${i}" ${it.on ? "checked" : ""}><span></span></label>
+          <div class="nt-ai-text"><strong>${esc(it.name)}</strong><small>${CONF[it.confidence]} · Б ${v.p} · Ж ${v.f} · У ${v.c}</small></div>
+          <label class="nt-ai-grams"><input type="number" inputmode="numeric" min="1" max="5000" value="${it.g}" data-ai-g="${i}" aria-label="Граммы: ${esc(it.name)}"><span>г</span></label>
+          <b data-ai-k="${i}">${fmt(v.k)}</b></li>`; }).join("")}</ul>
+        ${ai.note ? `<p class="nt-hint">💡 ${esc(ai.note)}</p>` : ""}
+        <p class="nt-hint">Это оценка по фото — поправь граммы, если знаешь точнее.</p>
+        <button type="button" class="sp-primary nt-wide" data-ai-add ${on.length ? "" : "disabled"}>Добавить в «${meal.name}» · <span data-ai-total>${fmt(total)}</span> ккал</button>`
+        : `<p class="nt-ai-error">${esc(ai.note || "Еды на фото не нашлось.")}</p>`;
+      body += `<form class="nt-ai-hint" data-ai-hint><input name="hint" maxlength="300" value="${esc(ai.hint || "")}" placeholder="Уточнить: «без масла», «это 2 котлеты»…" aria-label="Уточнение для нейросети"><button class="sp-ghost">Пересчитать</button></form>
+        <label class="nt-link nt-ai-again"><input type="file" accept="image/*" capture="environment" data-photo hidden>📷 Другое фото</label>`;
+    }
+    return `<div class="nt-sheet" role="dialog" aria-label="Распознавание еды"><div class="nt-sheet-card">${head}${photo}${body}</div></div>`;
+  }
+
+  /** Сжимает фото до 1280 px по длинной стороне (JPEG) — так быстрее и дешевле. */
+  async function shrink(file) {
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" }).catch(async () => {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      await img.decode();
+      return img;
+    });
+    const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.82);
+  }
+
+  async function recognize() {
+    ai.status = "loading"; ai.error = "";
+    render();
+    try {
+      const r = await fetch("/api/food-photo/", { method: "POST", headers: { "Content-Type": "application/json", "X-Dlife-Ai-Code": encodeURIComponent(aiCode()) }, body: JSON.stringify({ image: ai.photo, hint: ai.hint || "" }) });
+      const data = await r.json().catch(() => ({ error: r.status === 404 ? "Распознавание доступно только на сайте dlife-tau.vercel.app." : `Ошибка сервера (${r.status}).` }));
+      if (!ai) return;
+      if (r.status === 401 && data.needCode) { ai.status = "code"; ai.error = aiCode() ? "Код не подошёл." : ""; }
+      else if (!r.ok) { ai.status = "error"; ai.error = data.error || `Ошибка ${r.status}.`; }
+      else { ai.status = "done"; ai.note = data.note; ai.items = data.items.map((it) => ({ ...it, g: it.grams, on: true })); }
+    } catch {
+      if (ai) { ai.status = "error"; ai.error = "Нет связи с сервером — проверь интернет."; }
+    }
+    render();
+  }
+
   async function addEntry(entry) {
     const meal = adding;
     adding = null; picked = null; query = ""; grams = 0;
@@ -189,13 +260,21 @@ export function mountNutrition({ before, getState, save }) {
 
   root.addEventListener("click", async (e) => {
     const b = e.target.closest("button");
-    if (e.target.classList.contains("nt-sheet")) { adding = null; picked = null; render(); return; }
+    if (e.target.classList.contains("nt-sheet")) { adding = null; picked = null; ai = null; render(); return; }
     if (!b || busy) return;
     const d = b.dataset;
     if (d.day) { const next = shift(day, Number(d.day)); if (next <= today()) { day = next; render(); } }
     else if (d.goto) { day = d.goto; render(); }
     else if (d.add) { adding = d.add; picked = null; query = ""; render(); }
-    else if (d.close !== undefined) { adding = null; picked = null; render(); }
+    else if (d.close !== undefined) { adding = null; picked = null; ai = null; render(); }
+    else if (d.aiClose !== undefined) { ai = null; render(); }
+    else if (d.aiRetry !== undefined) await recognize();
+    else if (d.aiAdd !== undefined) {
+      const meal = adding, list = ai.items.filter((it) => it.on && it.g > 0);
+      if (!list.length) return;
+      adding = null; ai = null;
+      await change((data) => { for (const it of list) (data.log[day] ||= []).push({ id: crypto.randomUUID(), meal, name: it.name, g: it.g, ...scaled(it) }); });
+    }
     else if (d.back !== undefined) { picked = null; render(); }
     else if (d.pick) { picked = findFood(d.pick, n().foods); grams = picked.portion; render(); }
     else if (d.grams) { grams = Number(d.grams); render(); }
@@ -216,6 +295,13 @@ export function mountNutrition({ before, getState, save }) {
 
   root.addEventListener("input", (e) => {
     if (e.target.id === "nt-search") { query = e.target.value; root.querySelector(".nt-found").innerHTML = found(n()); }
+    if (e.target.matches("[data-ai-g]")) {
+      const i = Number(e.target.dataset.aiG), it = ai.items[i];
+      it.g = Math.max(0, Math.min(5000, Math.round(Number(e.target.value) || 0)));
+      root.querySelector(`[data-ai-k="${i}"]`).textContent = fmt(scaled(it).k);
+      const total = root.querySelector("[data-ai-total]");
+      if (total) total.textContent = fmt(ai.items.filter((x) => x.on).reduce((s, x) => s + scaled(x).k, 0));
+    }
     if (e.target.id === "nt-grams") {
       grams = Number(e.target.value) || 0;
       const out = root.querySelector(".nt-amount-row b"), p = portion(picked, grams);
@@ -225,11 +311,32 @@ export function mountNutrition({ before, getState, save }) {
     }
   });
 
-  root.addEventListener("keydown", (e) => { if (e.key === "Escape" && adding) { adding = null; picked = null; render(); } });
+  root.addEventListener("keydown", (e) => { if (e.key === "Escape" && adding) { adding = null; picked = null; ai = null; render(); } });
+
+  // Фото выбрано → сжать и отправить; галочки у распознанных блюд.
+  root.addEventListener("change", async (e) => {
+    if (e.target.matches("[data-photo]")) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      ai = { status: "loading", photo: "", items: [], hint: "" };
+      render();
+      try { ai.photo = await shrink(file); } catch { ai.status = "error"; ai.error = "Не получилось открыть фото."; render(); return; }
+      await recognize();
+    } else if (e.target.matches("[data-ai-on]")) {
+      ai.items[Number(e.target.dataset.aiOn)].on = e.target.checked;
+      render();
+    }
+  });
 
   root.addEventListener("submit", async (e) => {
     e.preventDefault();
     const f = e.target, v = Object.fromEntries(new FormData(f)), num = (x) => (x === "" || x === undefined ? 0 : Number(x));
+    if (f.dataset.aiCode !== undefined) {
+      try { localStorage.setItem(AI_CODE_KEY, String(v.code || "").trim()); } catch {}
+      await recognize();
+      return;
+    }
+    if (f.dataset.aiHint !== undefined) { ai.hint = String(v.hint || "").trim(); await recognize(); return; }
     if (f.dataset.amount !== undefined) {
       const g = num(v.g);
       if (!(g > 0)) return;
