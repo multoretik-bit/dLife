@@ -1,7 +1,7 @@
 import { icon } from "./icons.js";
 import { dateKey } from "./schedule.js";
 import { escapeHTML as esc } from "./development.js";
-import { ACTIVITY, PACES, targets, entriesOf, dayTotals, portion, weightStatus, logStreak, frequentFoods, changeNutrition } from "./nutrition-model.js";
+import { ACTIVITY, PACES, targets, entriesOf, dayTotals, portion, weightStatus, logStreak, frequentFoods, changeNutrition, dayBalance, KCAL_PER_KG } from "./nutrition-model.js";
 import { CALORIE_GOAL } from "./health.js";
 import { newWatchToken, pullWatch, WATCH_ENABLED, undoWatchDay } from "./watch.js";
 import { FOODS, FOOD_GROUPS, searchFoods, findFood } from "./foods.js";
@@ -26,7 +26,7 @@ export function mountNutrition({ before, getState, save }) {
   let ai = null;
   const n = () => getState().nutrition || {};
   const today = () => dateKey();
-  let burnForm = false, weekOffset = 0;
+  let burnForm = false, stepsForm = false, weekOffset = 0;
   // Apple Watch: панель подключения и последний ответ сервера ({ data } или { error }).
   let watchOpen = false, watchInfo = null, watchBusy = false, copied = "";
   const STEP_GOAL = 10000;
@@ -74,6 +74,8 @@ export function mountNutrition({ before, getState, save }) {
           <p>${burned >= CALORIE_GOAL ? "Минимум закрыт" : `Цель — минимум <b>${CALORIE_GOAL}</b> ккал`}</p>
           ${burnForm ? `<form class="nt-burn-form" data-burn><input name="amount" type="number" inputmode="numeric" min="0" max="20000" required placeholder="ккал" aria-label="Сколько калорий сожжено"><button class="nt-cta" name="mode" value="add">Добавить</button><button class="nt-cta is-quiet" name="mode" value="set" title="Заменить итог за день этим числом">Итог</button><button type="button" class="nt-x" data-burn-cancel aria-label="Отмена">×</button></form>`
             : `<button type="button" class="nt-cta is-burn" data-burn-open>＋ Добавить калории</button>`}
+          ${stepsForm ? `<form class="nt-burn-form" data-steps><input name="steps" type="number" inputmode="numeric" min="0" max="200000" required placeholder="шагов" aria-label="Шагов за день" value="${steps || ""}"><button class="nt-cta is-burn">Сохранить</button><button type="button" class="nt-x" data-steps-cancel aria-label="Отмена">×</button></form>`
+            : `<button type="button" class="nt-link nt-steps-link" data-steps-open>${icon("steps")} ${steps ? `${fmt(steps)} шагов` : "Добавить шаги"}</button>`}
         </section>
         ${WATCH_ENABLED ? `<section class="nt-big is-steps${steps >= STEP_GOAL ? " is-full" : ""}">
           <div class="nt-ring">
@@ -97,7 +99,7 @@ export function mountNutrition({ before, getState, save }) {
 
       <footer class="nt-foot"><span>Норма: ${fmt(t.kcal)} ккал в день · Б ${t.p} · Ж ${t.f} · У ${t.c} г</span><button type="button" class="nt-link" data-setup>Изменить цель и данные</button></footer>
       ${adding ? addDialog(data) : ""}`;
-    if (burnForm) root.querySelector("[data-burn] input")?.focus();
+    if (burnForm || stepsForm) root.querySelector("[data-burn] input, [data-steps] input")?.focus();
     // На телефоне клавиатура не выскакивает сама — поиск фокусируется только на компьютере.
     else if (adding && matchMedia("(hover: hover)").matches) (root.querySelector("#nt-grams") || root.querySelector("#nt-search"))?.focus();
   }
@@ -187,25 +189,38 @@ export function mountNutrition({ before, getState, save }) {
     watchBusy = false; render();
   }
 
-  /** Общая неделя: сколько съедено (против нормы) и сколько сожжено по дням. */
+  /** Неделя как баланс: съедено − расход (обмен × 1,2 + тренировки + шаги). Зелёный — дефицит, красный — профицит. */
   function weekBox(data, t) {
-    const end = shift(today(), weekOffset * 7), days = Array.from({ length: 7 }, (_, i) => shift(end, i - 6)), calories = getState().calories || {};
-    const eaten = days.map((d) => dayTotals(data, d).k), burned = days.map((d) => calories[d] || 0);
-    const logged = eaten.filter((k) => k > 0), avg = logged.length ? logged.reduce((a, b) => a + b, 0) / logged.length : 0;
-    const burnTotal = burned.reduce((a, b) => a + b, 0), top = Math.max(t.kcal * 1.25, ...eaten, ...burned, 1);
-    const stepsDays = days.map((d) => getState().steps?.[d] || 0).filter(Boolean);
+    const end = shift(today(), weekOffset * 7), days = Array.from({ length: 7 }, (_, i) => shift(end, i - 6)), st = getState();
+    const weight = weightStatus(data, today()).current || data.profile.weight;
+    const rows = days.map((d) => {
+      const eaten = dayTotals(data, d).k;
+      return { d, eaten, logged: eaten > 0, ...dayBalance({ bmr: t.bmr, weight, eaten, burned: st.calories?.[d] || 0, steps: st.steps?.[d] || 0 }) };
+    });
+    const logged = rows.filter((r) => r.logged), sum = logged.reduce((a, r) => a + r.balance, 0);
+    const maxAbs = Math.max(300, ...logged.map((r) => Math.abs(r.balance)));
+    const sign = (v) => (v > 0 ? "+" : v < 0 ? "−" : "") + fmt(Math.abs(v));
+    const word = (v) => (v < 0 ? "дефицит" : v > 0 ? "профицит" : "ровно");
     const range = `${new Date(days[0] + "T12:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "short" })} – ${new Date(days[6] + "T12:00:00").toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}`.replace(/\./g, "");
+    const sel = rows.find((r) => r.d === day) || rows[6];
+    const detail = sel.logged
+      ? `<b>${longDate(sel.d)}:</b> съедено <b>${fmt(sel.eaten)}</b>, потрачено <b>${fmt(sel.spent)}</b> ккал (обмен ${fmt(sel.base)}${sel.burned ? ` + тренировки ${fmt(sel.burned)}` : ""}${sel.stepsKcal ? ` + шаги ${fmt(sel.stepsKcal)}` : ""}) → <b class="${sel.balance <= 0 ? "is-def" : "is-sur"}">${word(sel.balance)} ${fmt(Math.abs(sel.balance))} ккал</b>${sel.d === today() ? " · день ещё идёт, итог изменится" : ""}`
+      : `<b>${longDate(sel.d)}:</b> еда не записана — баланс не посчитать.`;
     return `<section class="nt-box nt-week">
-      <header><h3>Неделя</h3><div class="nt-day nt-week-nav"><button type="button" data-week="-1" aria-label="Прошлая неделя">‹</button><span>${weekOffset ? range : "последние 7 дней"}</span><button type="button" data-week="1" aria-label="Следующая неделя" ${weekOffset ? "" : "disabled"}>›</button></div></header>
+      <header><h3>Баланс за неделю</h3><div class="nt-day nt-week-nav"><button type="button" data-week="-1" aria-label="Прошлая неделя">‹</button><span>${weekOffset ? range : "последние 7 дней"}</span><button type="button" data-week="1" aria-label="Следующая неделя" ${weekOffset ? "" : "disabled"}>›</button></div></header>
       <div class="nt-week-stats">
-        <div><span>Съедено в среднем</span><b>${logged.length ? fmt(avg) : "—"}<small> / ${fmt(t.kcal)} ккал</small></b></div>
-        <div><span>Сожжено за неделю</span><b>${fmt(burnTotal)}<small> ккал</small></b></div>
-        <div><span>Дней в норме еды</span><b>${eaten.filter((k) => k && k <= t.kcal * 1.05).length}<small> из ${logged.length}</small></b></div>
-        <div><span>Тренировок от ${CALORIE_GOAL} ккал</span><b>${burned.filter((k) => k >= CALORIE_GOAL).length}<small> из 7</small></b></div>
-        ${WATCH_ENABLED ? `<div><span>Шагов в среднем</span><b>${stepsDays.length ? fmt(stepsDays.reduce((a, b) => a + b, 0) / stepsDays.length) : "—"}<small> в день</small></b></div>` : ""}
+        <div class="${logged.length ? (sum <= 0 ? "is-def" : "is-sur") : ""}"><span>Итог недели</span><b>${logged.length ? sign(sum) : "—"}<small> ккал</small></b><small>${logged.length ? `${word(sum)} ≈ ${fmt(Math.abs(sum) / KCAL_PER_KG, 2)} кг` : "нет записей еды"}</small></div>
+        <div><span>В среднем за день</span><b>${logged.length ? sign(sum / logged.length) : "—"}<small> ккал</small></b></div>
+        <div><span>Дней в дефиците</span><b>${logged.filter((r) => r.balance < 0).length}<small> из ${logged.length}</small></b></div>
+        <div><span>Сожжено тренировками</span><b>${fmt(rows.reduce((a, r) => a + r.burned, 0))}<small> ккал</small></b></div>
       </div>
-      <div class="nt-bars nt-bars2" style="--g:${t.kcal / top}"><b class="nt-goal-line" aria-hidden="true"></b>${days.map((d, i) => `<button type="button" data-goto="${d}" class="${d === day ? "is-on" : ""}" aria-label="${longDate(d)}: съедено ${fmt(eaten[i])}, сожжено ${fmt(burned[i])} ккал"><em><i class="eat${eaten[i] > t.kcal * 1.05 ? " is-over" : ""}" style="height:${Math.max(eaten[i] ? 4 : 1.5, (eaten[i] / top) * 100)}%"></i><i class="burn" style="height:${Math.max(burned[i] ? 4 : 1.5, (burned[i] / top) * 100)}%"></i></em><span>${d === today() ? "сег" : dayName(d)}</span></button>`).join("")}</div>
-      <p class="nt-legend"><span class="eat">съедено</span><span class="burn">сожжено</span><span class="line">норма еды</span></p>
+      <div class="nt-bal">${rows.map((r) => {
+        const h = r.logged ? Math.max(4, (Math.abs(r.balance) / maxAbs) * 100) : 0, def = r.balance <= 0;
+        return `<button type="button" data-goto="${r.d}" class="${r.d === day ? "is-on" : ""}${r.logged ? (def ? " is-def" : " is-sur") : " is-empty"}" aria-label="${longDate(r.d)}: ${r.logged ? `${word(r.balance)} ${fmt(Math.abs(r.balance))} ккал` : "нет записей"}">
+          <em><i style="height:${h * 0.38}%"></i><small>${r.logged ? sign(r.balance) : "—"}</small></em><span>${r.d === today() ? "сег" : dayName(r.d)}</span></button>`;
+      }).join("")}</div>
+      <p class="nt-day-sum">${detail}</p>
+      <p class="nt-legend"><span class="def">дефицит — сжёг больше, чем съел</span><span class="sur">профицит</span></p>
     </section>`;
   }
 
@@ -305,7 +320,9 @@ export function mountNutrition({ before, getState, save }) {
     else if (d.goto) { day = d.goto; render(); }
     else if (d.add !== undefined) { adding = true; picked = null; query = ""; burnForm = false; render(); }
     else if (d.week) { weekOffset = Math.min(0, weekOffset + Number(d.week)); render(); }
-    else if (d.burnOpen !== undefined) { burnForm = true; render(); }
+    else if (d.burnOpen !== undefined) { burnForm = true; stepsForm = false; render(); }
+    else if (d.stepsOpen !== undefined) { stepsForm = true; burnForm = false; render(); }
+    else if (d.stepsCancel !== undefined) { stepsForm = false; render(); }
     else if (d.watchToggle !== undefined) { watchOpen = !watchOpen || !b.classList.contains("nt-watch-btn"); render(); if (watchOpen) root.querySelector(".nt-watch")?.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
     else if (d.watchConnect !== undefined) { busy = true; try { await save({ ...structuredClone(getState()), healthSync: { token: newWatchToken() } }); } finally { busy = false; render(); } }
     else if (d.watchCheck !== undefined) await syncWatch();
@@ -382,6 +399,17 @@ export function mountNutrition({ before, getState, save }) {
     if (f.dataset.aiCode !== undefined) {
       try { localStorage.setItem(AI_CODE_KEY, String(v.code || "").trim()); } catch {}
       await recognize();
+      return;
+    }
+    if (f.dataset.steps !== undefined) {
+      const value = Math.round(num(v.steps));
+      if (!(value >= 0 && value <= 200000)) return;
+      const next = structuredClone(getState());
+      next.steps = { ...next.steps, [day]: value };
+      if (!value) delete next.steps[day];
+      stepsForm = false;
+      busy = true;
+      try { await save(next); } finally { busy = false; render(); }
       return;
     }
     if (f.dataset.burn !== undefined) {

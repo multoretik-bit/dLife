@@ -171,3 +171,12 @@ export function validateNutrition(n) {
   }
   return true;
 }
+
+// Энергобаланс дня: расход = обмен в покое × 1,2 (быт без спорта) + сожжено тренировками + шаги.
+// Шаг ≈ 0,0005 ккал на кг веса (≈ 0,045 ккал при 90 кг). Баланс = съедено − расход: минус — дефицит, плюс — профицит.
+export const STEP_KCAL_PER_KG = 0.0005;
+export function dayBalance({ bmr, weight, eaten, burned = 0, steps = 0 }) {
+  const base = Math.round(bmr * 1.2), stepsKcal = Math.round(steps * STEP_KCAL_PER_KG * weight);
+  const spent = base + burned + stepsKcal;
+  return { base, burned, stepsKcal, spent, balance: Math.round(eaten - spent) };
+}

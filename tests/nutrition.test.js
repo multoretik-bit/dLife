@@ -84,3 +84,13 @@ test("food base has unique ids and search ranks word starts first", () => {
   assert.equal(searchFoods("ябл")[0].id, "fr-apple");
   assert.equal(searchFoods("мой", [{ id: "m", name: "Мой салат", k: 80, p: 2, f: 5, c: 6, portion: 200 }])[0].id, "m");
 });
+
+test("day balance: eaten minus (resting × 1.2 + workouts + steps)", async () => {
+  const { dayBalance } = await import("../dist/nutrition-model.js");
+  const b = dayBalance({ bmr: 1920, weight: 90, eaten: 1800, burned: 300, steps: 8000 });
+  assert.equal(b.base, 2304);
+  assert.equal(b.stepsKcal, 360);
+  assert.equal(b.spent, 2964);
+  assert.equal(b.balance, -1164, "дефицит");
+  assert.equal(dayBalance({ bmr: 1920, weight: 90, eaten: 3000 }).balance, 696, "профицит");
+});

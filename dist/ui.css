@@ -620,3 +620,38 @@ svg.ic { display: inline-block; width: 1em; height: 1em; flex: none; fill: none;
 .nt-rings:not(:has(.is-steps)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 /* Время у привычки (например, 20:30 · Испанский) */
 .td-text strong time { margin-right: 4px; color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ---------- Баланс за неделю: зелёный — дефицит (вверх), красный — профицит (вниз) ---------- */
+.nt-week-stats div.is-def { background: #e8f7ee; }
+.nt-week-stats div.is-def b { color: #15803d; }
+.nt-week-stats div.is-sur { background: #fdeceb; }
+.nt-week-stats div.is-sur b { color: #c2412d; }
+.nt-week-stats div > small { color: var(--ink-2); font-size: 12px; font-weight: 600; }
+.nt-bal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.nt-bal button { display: grid; grid-template-rows: 150px 22px; justify-items: center; padding: 0; border: 0; border-radius: 12px; background: none; cursor: pointer; }
+.nt-bal button:hover, .nt-bal button.is-on { background: var(--soft); }
+.nt-bal em { position: relative; display: block; width: 100%; height: 150px; }
+.nt-bal em::before { content: ""; position: absolute; left: 6px; right: 6px; top: 50%; border-top: 1.5px solid #d6dbe0; }
+.nt-bal i { position: absolute; left: 50%; width: min(28px, 60%); transform: translateX(-50%); transition: height 0.5s; }
+.nt-bal .is-def i { bottom: 50%; border-radius: 7px 7px 2px 2px; background: #22b07d; }
+.nt-bal .is-sur i { top: 50%; border-radius: 2px 2px 7px 7px; background: #ef5a4c; }
+.nt-bal em small { position: absolute; left: 0; right: 0; font-size: 11.5px; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.nt-bal .is-def em small { top: 2px; color: #15803d; }
+.nt-bal .is-sur em small { bottom: 2px; color: #c2412d; }
+.nt-bal .is-empty em small { top: calc(50% - 22px); color: var(--muted); }
+.nt-bal button > span { align-self: center; color: var(--muted); font-size: 12px; font-weight: 700; }
+.nt-bal button.is-on > span { color: var(--ink); }
+.nt-day-sum { margin: 12px 0 0; padding: 12px 14px; border-radius: 14px; background: var(--soft); color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+.nt-day-sum b { color: var(--ink); }
+.nt-day-sum b.is-def { color: #15803d; }
+.nt-day-sum b.is-sur { color: #c2412d; }
+.nt-legend .def::before { background: #22b07d; }
+.nt-legend .sur::before { background: #ef5a4c; }
+.nt-steps-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 13.5px; }
+@media (max-width: 760px) {
+  .nt-bal { gap: 2px; }
+  .nt-bal button { grid-template-rows: 130px 20px; }
+  .nt-bal em { height: 130px; }
+  .nt-bal em small { font-size: 10px; letter-spacing: -0.02em; }
+}
+.nt-bal em, .nt-bal em small { font-style: normal; }
