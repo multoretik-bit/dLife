@@ -95,3 +95,181 @@ $('.home-tiles')?.addEventListener('submit', async e => {
   if (await saveToday(next)) form.parentElement.innerHTML = tileButtons[kind];
   else form.querySelectorAll('button,input').forEach(el => (el.disabled = false));
 });
+
+$('#export-data')?.addEventListener('click', async () => {
+  try {
+    const data = await new ScheduleStore().load();
+    const url = URL.createObjectURL(new Blob([JSON.stringify({format: 'dlife-backup-v1', exportedAt: new Date().toISOString(), state: data}, null, 2)], {type: 'application/json'}));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'dlife-' + dateKey() + '.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (e) {
+    $('#home-status').textContent = e.message;
+  }
+});
+
+function openCloudDialog() {
+  const c = cloudConfig();
+  if ($('#cloud-url')) $('#cloud-url').value = c?.url || '';
+  if ($('#cloud-key')) $('#cloud-key').value = c?.key || '';
+  $('#cloud-status').textContent = codeSyncEnabled() ? 'Синхронизация по коду активна.' : cloudEnabled() ? 'Хранилище: Supabase (синхронизация активна)' : 'Хранилище: dLife. Создай код для синхронизации.';
+  $('#cloud-dialog')?.showModal();
+}
+
+$('#open-cloud')?.addEventListener('click', openCloudDialog);
+
+$('#cloud-config')?.addEventListener('submit', e => {
+  e.preventDefault();
+  try {
+    if (cloudEnabled()) throw Error('Нельзя менять проект при активной синхронизации. Сначала сохрани резервную копию.');
+    configureCloud($('#cloud-url').value, $('#cloud-key').value.trim());
+    $('#cloud-status').textContent = 'Подключение сохранено. Войди в свой аккаунт.';
+  } catch (e) {
+    $('#cloud-status').textContent = e.message;
+  }
+});
+
+$('#cloud-login')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  const c = cloudClient();
+  if (!c) {
+    $('#cloud-status').textContent = 'Сначала укажи проект Supabase.';
+    return;
+  }
+  $('#cloud-status').textContent = 'Входим в dMoney…';
+  const email = $('#cloud-email').value.trim();
+  const password = $('#cloud-password').value;
+  const {data, error} = await c.auth.signInWithPassword({email, password});
+  $('#cloud-password').value = '';
+  if (error) {
+    $('#cloud-status').textContent = 'Не удалось войти в dMoney: ' + error.message;
+    return;
+  }
+  let syncMessage = '';
+  if (savedSyncCode()) {
+    try {
+      await joinSyncCode(savedSyncCode(), state || emptyState());
+      syncMessage = ' Код синхронизации привязан к аккаунту.';
+    } catch (syncError) {
+      syncMessage = ' Код синхронизации нужно подключить повторно: ' + syncError.message;
+    }
+  }
+  $('#cloud-status').textContent = 'Вход выполнен.' + syncMessage;
+  setTimeout(() => {
+    $('#cloud-dialog')?.close();
+  }, 1000);
+  await capital();
+});
+
+$('#cloud-migrate')?.addEventListener('click', async () => {
+  if (busy) return;
+  busy = true;
+  try {
+    const user = await cloudUser();
+    if (!user) throw Error('Сначала войди в Supabase / dMoney.');
+    const c = cloudClient();
+    const {data, error} = await c.from('dlife_state').select('payload,revision').eq('user_id', user.id).maybeSingle();
+    if (error) throw error;
+    if (!data) {
+      const current = await new ScheduleStore().load();
+      const result = await c.rpc('dlife_save', {p_payload: current, p_revision: 0});
+      if (result.error) throw result.error;
+    } else if (!confirm('В Supabase уже есть данные. Подключить их? Текущие данные dLife останутся в прежнем хранилище.')) return;
+    localStorage.setItem('dlife-cloud-enabled', 'true');
+    location.reload();
+  } catch (e) {
+    $('#cloud-status').textContent = 'Перенос не выполнен. ' + e.message;
+  } finally {
+    busy = false;
+  }
+});
+
+$('#cloud-logout')?.addEventListener('click', async () => {
+  await cloudClient()?.auth.signOut();
+  $('#cloud-status').textContent = 'Выход из аккаунта синхронизации выполнен.';
+  await capital();
+});
+
+const fallbackRates = {USD: 1, EUR: 0.8671, RUB: 83.274, KZT: 465.07, THB: 33.15, KGS: 87.49, GBP: 0.7516, TRY: 47.81, GEL: 2.61};
+let ratesCache = null;
+
+async function exchangeRates(baseCurrency = 'USD') {
+  if (ratesCache && ratesCache.base === baseCurrency && ratesCache.exp > Date.now()) {
+    return ratesCache.rates;
+  }
+  try {
+    const r = await fetch(`https://open.er-api.com/v6/latest/${baseCurrency}`, {cache: 'no-store'});
+    if (!r.ok) throw Error(String(r.status));
+    const data = await r.json();
+    if (data?.rates) {
+      ratesCache = {base: baseCurrency, rates: data.rates, exp: Date.now() + 5 * 60_000};
+      return data.rates;
+    }
+  } catch {}
+  return fallbackRates;
+}
+
+async function capital() {
+  const c = dcapitalClient(), {data: {user}} = await c.auth.getUser().catch(() => ({data: {user: null}}));
+  if (!user) {
+    $('#capital-value').textContent = '—';
+    $('#capital-status').textContent = 'Войди в dCapital, чтобы видеть капитал';
+    $('#capital-refresh').textContent = 'Войти в dCapital';
+    return;
+  }
+  $('#capital-refresh').textContent = 'Обновить';
+  $('#capital-status').textContent = 'Загружаю счета dCapital…';
+  try {
+    const [walletResult, assetResult, prefsResult] = await Promise.all([
+      c.from('wallets').select('balance,currency'),
+      c.from('assets').select('estimated_value,currency'),
+      c.from('user_preferences').select('base_currency').eq('user_id', user.id).maybeSingle(),
+    ]);
+    if (walletResult.error) throw walletResult.error;
+    const wallets = walletResult.data || [], assets = assetResult.error ? [] : assetResult.data || [];
+    const base = prefsResult.data?.base_currency || 'USD', rates = await exchangeRates(base);
+    const inBase = (amount, currency) => {
+      const rate = !currency || currency === base ? 1 : Number(rates[currency]);
+      return Number.isFinite(rate) && rate > 0 ? Number(amount || 0) / rate : 0;
+    };
+    const money = wallets.reduce((sum, w) => sum + inBase(w.balance, w.currency), 0);
+    const property = assets.reduce((sum, a) => sum + inBase(a.estimated_value, a.currency), 0);
+    const fmt = n => new Intl.NumberFormat('ru-RU', {maximumFractionDigits: 0}).format(Math.round(n));
+    $('#capital-value').textContent = `${fmt(money)} ${base}`;
+    const time = new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'});
+    $('#capital-status').textContent = `${wallets.length} ${plural(wallets.length, 'счёт', 'счёта', 'счетов')}${property ? ` · имущество ≈ ${fmt(property)} ${base}` : ''} · обновлено в ${time}`;
+  } catch (e) {
+    $('#capital-status').textContent = 'Не удалось прочитать dCapital: ' + e.message;
+  }
+}
+
+$('#dcapital-login')?.addEventListener('submit', async e => {
+  e.preventDefault();
+  $('#dcapital-status').textContent = 'Вхожу в dCapital…';
+  const {error} = await dcapitalClient().auth.signInWithPassword({email: $('#dcapital-email').value.trim(), password: $('#dcapital-password').value});
+  $('#dcapital-password').value = '';
+  if (error) { $('#dcapital-status').textContent = 'Не получилось войти: ' + error.message; return; }
+  $('#dcapital-status').textContent = 'Готово! Капитал подключён.';
+  setTimeout(() => $('#dcapital-dialog')?.close(), 700);
+  await capital();
+});
+
+$('#dcapital-logout')?.addEventListener('click', async () => {
+  await dcapitalClient().auth.signOut();
+  $('#dcapital-status').textContent = 'Вышел из dCapital на этом устройстве.';
+  await capital();
+});
+
+$('#capital-refresh')?.addEventListener('click', async () => {
+  const {data: {user}} = await dcapitalClient().auth.getUser().catch(() => ({data: {user: null}}));
+  if (!user) {
+    $('#dcapital-status').textContent = '';
+    $('#dcapital-dialog')?.showModal();
+    return;
+  }
+  await capital();
+});
+
+capital();
