@@ -479,3 +479,14 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
   .nt-ai-grams input { width: 62px; }
 }
 @media (prefers-reduced-motion: reduce) { .nt-ai-loading i { animation: none; } }
+
+/* Поле «Добавить воду / калории» на плитке */
+.tile-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 8px; width: 100%; }
+.tile-form input { min-width: 0; min-height: 40px; padding: 6px 12px; border-radius: 12px !important; font-size: 16px; font-weight: 700; }
+.tile-form > span { color: var(--muted); font-size: 13px; font-weight: 700; }
+.tile-form div { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tile-btn.is-quiet { background: transparent; color: var(--ink-2); padding-inline: 8px; }
+.tile-x { margin-left: auto; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 20px; cursor: pointer; }
+.tile-x:hover { background: var(--soft); color: var(--ink); }
+@media (max-width: 760px) { .tile-form div .tile-btn { flex: 1 1 auto; } }
+@media (max-width: 760px) { .tile:has(.tile-form) { grid-column: 1 / -1; } }

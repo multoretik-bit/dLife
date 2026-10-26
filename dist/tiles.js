@@ -4,6 +4,7 @@ import { targets, dayTotals, weightStatus, changeNutrition, WATER_GOAL, GLASS } 
 import { CALORIE_GOAL } from "./health.js";
 
 // Плитки дня на главной: привычки, доход (капитал), время с пользой, еда, вода, сожжённые калории.
+// Воду и калории можно добавить прямо с плитки — числом через форму.
 // Разметка плиток статична (index.html), здесь только обновляются числа и кольца.
 const fmt = (n) => new Intl.NumberFormat("ru-RU").format(Math.round(n));
 const $ = (s) => document.querySelector(s);
@@ -17,8 +18,9 @@ function setTile(id, { value, sub, now = 0, max = 0 }) {
   const fill = tile.querySelector(".tile-fill");
   if (fill) {
     const pct = max ? Math.max(0, Math.min(1, now / max)) : 0;
-    fill.setAttribute("stroke-dasharray", C);
-    fill.setAttribute("stroke-dashoffset", C * (1 - pct));
+    // Через style: CSS-правило .tile-fill перебивает атрибуты SVG.
+    fill.style.strokeDasharray = C;
+    fill.style.strokeDashoffset = C * (1 - pct);
     tile.classList.toggle("is-full", pct >= 1);
   }
 }
@@ -49,13 +51,27 @@ export function updateTiles(state) {
   setTile("burn", { value: `${fmt(burned)}<small> ккал</small>`, sub: burned >= CALORIE_GOAL ? "минимум закрыт 🔥" : `сожжено · цель ${CALORIE_GOAL}`, now: burned, max: CALORIE_GOAL });
 }
 
-/** Быстрые кнопки на плитках: стакан воды и сожжённые калории. Возвращает новое состояние или null. */
-export function quickChange(state, action) {
-  const today = dateKey();
-  if (action === "water") return changeNutrition(state, today, (n) => { n.water[today] = Math.min(10000, (n.water[today] || 0) + GLASS); });
-  if (action === "burn") {
-    const next = structuredClone(state);
-    next.calories = { ...next.calories, [today]: Math.min(20000, (next.calories?.[today] || 0) + 100) };
+/** Форма на плитке: сколько добавить (или исправить итог за сегодня). */
+export const TILE_FORMS = {
+  water: { unit: "мл", max: 10000, placeholder: "например, 250", label: "Сколько воды, мл" },
+  burn: { unit: "ккал", max: 20000, placeholder: "например, 300", label: "Сколько калорий сожжено" },
+};
+export const tileForm = (kind) => {
+  const f = TILE_FORMS[kind];
+  return `<form class="tile-form" data-tile-form="${kind}"><input name="amount" type="number" inputmode="numeric" min="0" max="${f.max}" step="1" required placeholder="${f.placeholder}" aria-label="${f.label}"><span>${f.unit}</span>
+    <div><button class="tile-btn" name="mode" value="add">Добавить</button><button class="tile-btn is-quiet" name="mode" value="set" title="Заменить сегодняшний итог этим числом">Сделать итогом</button><button type="button" class="tile-x" data-tile-cancel aria-label="Отмена">×</button></div></form>`;
+};
+
+/** Добавляет воду или сожжённые калории за сегодня (mode "set" — исправляет итог). Возвращает новое состояние или null. */
+export function tileChange(state, kind, amount, mode = "add") {
+  const today = dateKey(), value = Math.round(Number(amount));
+  if (!Number.isFinite(value) || value < 0 || (mode === "add" && value === 0)) return null;
+  const total = (cur) => Math.min(TILE_FORMS[kind].max, mode === "set" ? value : cur + value);
+  if (kind === "water") return changeNutrition(state, today, (n) => { const v = total(n.water[today] || 0); if (v) n.water[today] = v; else delete n.water[today]; });
+  if (kind === "burn") {
+    const next = structuredClone(state), v = total(next.calories?.[today] || 0);
+    next.calories = { ...next.calories, [today]: v };
+    if (!v) delete next.calories[today];
     return next;
   }
   return null;
