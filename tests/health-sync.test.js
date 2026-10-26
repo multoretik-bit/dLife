@@ -98,3 +98,13 @@ test("calories equal to steps are a Shortcut mix-up and are not stored", async (
   assert.match(res.body.hint, /Active Energy/);
   assert.match(res.body.hint, /Limit 1/);
 });
+
+test("the one-time revert puts back 55 kcal and drops the watch steps for 26.10", async () => {
+  const { undoWatchDay } = await import("../dist/watch.js");
+  const next = undoWatchDay({ ...emptyState(), calories: { "2026-10-26": 4764, "2026-10-25": 300 }, steps: { "2026-10-26": 4764 } });
+  assert.equal(next.calories["2026-10-26"], 55);
+  assert.equal(next.calories["2026-10-25"], 300);
+  assert.equal(next.steps["2026-10-26"], undefined);
+  assert.equal(undoWatchDay({ ...emptyState(), calories: { "2026-10-26": 636 } }).calories["2026-10-26"], 55);
+  assert.equal(undoWatchDay({ ...emptyState(), calories: { "2026-10-26": 120 } }), null, "другие значения не трогает");
+});

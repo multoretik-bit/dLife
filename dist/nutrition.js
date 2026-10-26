@@ -3,7 +3,7 @@ import { dateKey } from "./schedule.js";
 import { escapeHTML as esc } from "./development.js";
 import { ACTIVITY, PACES, targets, entriesOf, dayTotals, portion, weightStatus, logStreak, frequentFoods, changeNutrition } from "./nutrition-model.js";
 import { CALORIE_GOAL } from "./health.js";
-import { newWatchToken, pullWatch } from "./watch.js";
+import { newWatchToken, pullWatch, WATCH_ENABLED, undoWatchDay } from "./watch.js";
 import { FOODS, FOOD_GROUPS, searchFoods, findFood } from "./foods.js";
 
 const fmt = (n, digits = 0) => new Intl.NumberFormat("ru-RU", { maximumFractionDigits: digits }).format(n);
@@ -51,7 +51,7 @@ export function mountNutrition({ before, getState, save }) {
     root.innerHTML = `
       <div class="nt-head">
         <div><h2 id="nutrition-title">Калории</h2><p>${streak ? `${icon("flame", "is-streak")} ${streak} ${streak % 10 === 1 && streak % 100 !== 11 ? "день" : streak % 10 >= 2 && streak % 10 <= 4 && (streak % 100 < 10 || streak % 100 >= 20) ? "дня" : "дней"} подряд с записями` : "Записывай еду — так проще видеть, что работает"}</p></div>
-        <button type="button" class="nt-watch-btn${getState().healthSync ? " is-on" : ""}" data-watch-toggle aria-expanded="${watchOpen}">${icon("watch")} Apple Watch</button>
+        ${WATCH_ENABLED ? `<button type="button" class="nt-watch-btn${getState().healthSync ? " is-on" : ""}" data-watch-toggle aria-expanded="${watchOpen}">${icon("watch")} Apple Watch</button>` : ""}
         <div class="nt-day"><button type="button" data-day="-1" aria-label="Предыдущий день">‹</button><span>${isToday ? "Сегодня" : longDate(day)}</span><button type="button" data-day="1" aria-label="Следующий день" ${isToday ? "disabled" : ""}>›</button></div>
       </div>
 
@@ -75,7 +75,7 @@ export function mountNutrition({ before, getState, save }) {
           ${burnForm ? `<form class="nt-burn-form" data-burn><input name="amount" type="number" inputmode="numeric" min="0" max="20000" required placeholder="ккал" aria-label="Сколько калорий сожжено"><button class="nt-cta" name="mode" value="add">Добавить</button><button class="nt-cta is-quiet" name="mode" value="set" title="Заменить итог за день этим числом">Итог</button><button type="button" class="nt-x" data-burn-cancel aria-label="Отмена">×</button></form>`
             : `<button type="button" class="nt-cta is-burn" data-burn-open>＋ Добавить калории</button>`}
         </section>
-        <section class="nt-big is-steps${steps >= STEP_GOAL ? " is-full" : ""}">
+        ${WATCH_ENABLED ? `<section class="nt-big is-steps${steps >= STEP_GOAL ? " is-full" : ""}">
           <div class="nt-ring">
             <svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52" class="nt-ring-track"/><circle cx="60" cy="60" r="52" class="nt-ring-fill" ${ring(52, steps, STEP_GOAL)}/></svg>
             <div><b>${fmt(steps)}</b><span>шагов</span></div>
@@ -83,10 +83,10 @@ export function mountNutrition({ before, getState, save }) {
           <h3>Шаги</h3>
           <p>${steps >= STEP_GOAL ? "Цель дня выполнена" : `Цель — <b>${fmt(STEP_GOAL)}</b>`}</p>
           ${getState().healthSync ? `<span class="nt-sync-note">${icon("watch")} с Apple Watch</span>` : `<button type="button" class="nt-cta is-steps" data-watch-toggle>${icon("watch")} Подключить часы</button>`}
-        </section>
+        </section>` : ""}
       </div>
 
-      ${watchOpen ? watchPanel() : ""}
+      ${WATCH_ENABLED && watchOpen ? watchPanel() : ""}
       <section class="nt-box nt-eaten">
         <header><h3>Еда за ${isToday ? "сегодня" : "день"}</h3>${list.length ? `<b>${fmt(tot.k)} ккал</b>` : ""}</header>
         ${list.length ? `<ul>${list.map((e) => `<li><div><strong>${esc(e.name)}</strong><small>${e.g ? `${fmt(e.g)} ${findFood(e.food, data.foods)?.unit || "г"} · ` : ""}Б ${fmt(e.p, 1)} · Ж ${fmt(e.f, 1)} · У ${fmt(e.c, 1)}</small></div><b>${fmt(e.k)}</b><button type="button" class="nt-x" data-remove="${esc(e.id)}" aria-label="Удалить ${esc(e.name)}">×</button></li>`).join("")}</ul>`
@@ -202,7 +202,7 @@ export function mountNutrition({ before, getState, save }) {
         <div><span>Сожжено за неделю</span><b>${fmt(burnTotal)}<small> ккал</small></b></div>
         <div><span>Дней в норме еды</span><b>${eaten.filter((k) => k && k <= t.kcal * 1.05).length}<small> из ${logged.length}</small></b></div>
         <div><span>Тренировок от ${CALORIE_GOAL} ккал</span><b>${burned.filter((k) => k >= CALORIE_GOAL).length}<small> из 7</small></b></div>
-        <div><span>Шагов в среднем</span><b>${stepsDays.length ? fmt(stepsDays.reduce((a, b) => a + b, 0) / stepsDays.length) : "—"}<small> в день</small></b></div>
+        ${WATCH_ENABLED ? `<div><span>Шагов в среднем</span><b>${stepsDays.length ? fmt(stepsDays.reduce((a, b) => a + b, 0) / stepsDays.length) : "—"}<small> в день</small></b></div>` : ""}
       </div>
       <div class="nt-bars nt-bars2" style="--g:${t.kcal / top}"><b class="nt-goal-line" aria-hidden="true"></b>${days.map((d, i) => `<button type="button" data-goto="${d}" class="${d === day ? "is-on" : ""}" aria-label="${longDate(d)}: съедено ${fmt(eaten[i])}, сожжено ${fmt(burned[i])} ккал"><em><i class="eat${eaten[i] > t.kcal * 1.05 ? " is-over" : ""}" style="height:${Math.max(eaten[i] ? 4 : 1.5, (eaten[i] / top) * 100)}%"></i><i class="burn" style="height:${Math.max(burned[i] ? 4 : 1.5, (burned[i] / top) * 100)}%"></i></em><span>${d === today() ? "сег" : dayName(d)}</span></button>`).join("")}</div>
       <p class="nt-legend"><span class="eat">съедено</span><span class="burn">сожжено</span><span class="line">норма еды</span></p>
@@ -425,6 +425,8 @@ export function mountNutrition({ before, getState, save }) {
   });
 
   render();
-  if (getState().healthSync) syncWatch();
+  if (WATCH_ENABLED && getState().healthSync) syncWatch();
+  // Разовый откат неверных данных часов за 26.10.2026 (пока синхронизация выключена).
+  else if (!WATCH_ENABLED) { const fixed = undoWatchDay(getState()); if (fixed) save(fixed).then(render); }
   return { render };
 }

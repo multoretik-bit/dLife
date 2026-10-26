@@ -615,3 +615,6 @@ svg.ic { display: inline-block; width: 1em; height: 1em; flex: none; fill: none;
 .tile-ring > span svg.ic { width: 1em; height: 1em; transform: none; }
 .tile-ring > span { font-size: 22px; }
 @media (max-width: 760px) { .tile-ring > span { font-size: 17px; } }
+
+/* Пока Apple Watch выключен — два круга (съедено, сожжено) */
+.nt-rings:not(:has(.is-steps)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }

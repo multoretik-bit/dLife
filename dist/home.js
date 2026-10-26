@@ -4,7 +4,7 @@ import {dateKey,emptyState,validateState} from './schedule.js';
 import {coinTotal,normalize} from './development.js';
 import {mountToday} from './today.js';
 import {updateTiles, tileForm, tileChange} from './tiles.js';
-import {pullWatch} from './watch.js';
+import {pullWatch, WATCH_ENABLED, undoWatchDay} from './watch.js';
 
 const $ = s => document.querySelector(s), store = new ScheduleStore();
 let state = null, busy = false;
@@ -63,7 +63,8 @@ try {
   render();
   if ($('#today')) mountToday({root: $('#today'), getState: () => state, save: saveToday});
   // Свежие шаги и калории с Apple Watch (если часы подключены в «Здоровье»).
-  pullWatch(() => state, saveToday);
+  if (WATCH_ENABLED) pullWatch(() => state, saveToday);
+  else { const fixed = undoWatchDay(state); if (fixed && await saveToday(fixed)) $('#home-status').textContent = 'Вернул калории за 26 октября: 55 ккал.'; }
   // Разовая правка по просьбе Дениса: 26.10.2026 случайно добавлено 2 × 100 ккал сожжённых (было 255 → 55).
   if (state.calories?.['2026-10-26'] === 255 && await saveToday({...state, calories: {...state.calories, '2026-10-26': 55}}))
     $('#home-status').textContent = 'Убрал лишние 200 ккал за 26 октября.';

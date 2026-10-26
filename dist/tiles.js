@@ -44,9 +44,9 @@ export function updateTiles(state) {
     $("#tile-food")?.classList.toggle("is-over", left < -t.kcal * 0.05);
   } else setTile("food", { value: eaten.k ? `${fmt(eaten.k)}<small> ккал</small>` : "—", sub: "посчитай норму калорий", now: 0, max: 1 });
 
-  const burned = state.calories?.[today] || 0, steps = state.steps?.[today];
+  const burned = state.calories?.[today] || 0;
   const burnSub = burned >= CALORIE_GOAL ? "минимум закрыт" : `сожжено · цель ${CALORIE_GOAL}`;
-  setTile("burn", { value: `${fmt(burned)}<small> ккал</small>`, sub: steps ? `${burnSub} · ${fmt(steps)} шагов` : burnSub, now: burned, max: CALORIE_GOAL });
+  setTile("burn", { value: `${fmt(burned)}<small> ккал</small>`, sub: burnSub, now: burned, max: CALORIE_GOAL });
 }
 
 /** Форма на плитке: сколько добавить (или исправить итог за сегодня). */

@@ -2,6 +2,22 @@
 // dLife при открытии забирает их и записывает в state.steps / state.calories.
 const API = "/api/health-sync/";
 
+// Синхронизация с Apple Watch временно выключена по просьбе Дениса (26.10.2026): кнопка, панель, круг «Шаги»
+// и подтягивание данных скрыты. Сервер api/health-sync остаётся; включить обратно — true.
+export const WATCH_ENABLED = false;
+
+/** Разовый откат 26.10.2026: часы записали неверные калории (636 и 4764 — это шаги) и 4764 шага.
+    Возвращает калории к 55 (значение до синхронизации) и убирает эти шаги. null — откатывать нечего. */
+export function undoWatchDay(state) {
+  const day = "2026-10-26", kcal = state?.calories?.[day], steps = state?.steps?.[day];
+  const badKcal = kcal === 636 || kcal === 4764, badSteps = steps === 4764;
+  if (!badKcal && !badSteps) return null;
+  const next = structuredClone(state);
+  if (badKcal) next.calories = { ...next.calories, [day]: 55 };
+  if (badSteps) { next.steps = { ...next.steps }; delete next.steps[day]; }
+  return next;
+}
+
 /** Новый секретный токен (32 символа, base64url). Хранится в state.healthSync — общий для всех устройств. */
 export function newWatchToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(24));
