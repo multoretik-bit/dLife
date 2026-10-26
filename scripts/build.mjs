@@ -33,6 +33,7 @@ await cp("dist/schedule.js", "dist/server/schedule.js");
 await cp("dist/study-model.js", "dist/server/study-model.js");
 await cp("dist/library-catalog.js", "dist/server/library-catalog.js");
 await cp("dist/library-plan.js", "dist/server/library-plan.js");
+await cp("dist/nutrition-model.js", "dist/server/nutrition-model.js");
 await writeFile(
   "dist/server/api.js",
   (await readFile("src/api.js", "utf8")).replace(

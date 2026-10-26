@@ -12,15 +12,13 @@
     <link rel="stylesheet" href="/design.css" />
     <link rel="stylesheet" href="/features.css" />
     <script type="module" src="/app.js"></script><script type="module" src="/home.js"></script>
-  <link rel="stylesheet" href="/extensions.css"/><link rel="stylesheet" href="/theme.css"/><link rel="stylesheet" href="/goals.css"/><script type="module" src="/account.js"></script></head>
+  <link rel="stylesheet" href="/extensions.css"/><link rel="stylesheet" href="/theme.css"/><link rel="stylesheet" href="/goals.css"/><script type="module" src="/account.js"></script>  <link rel="stylesheet" href="/ui.css" />
+  </head>
   <body>
     <div class="workspace">
       <header class="header">
         <a class="brand" href="/" aria-label="dLife — главная"><img src="/assets/app-icon.png" alt="" width="48" height="48"/><span>dLife</span></a>
-        <nav aria-label="Основная навигация">
-          <a class="nav-current" href="/" aria-current="page">Профиль</a
-          ><a href="/now/">Задачи</a> <a href="/aspects/">Аспекты</a>
-        </nav>
+        <nav aria-label="Основная навигация"><a href="/">Сегодня</a><a href="/now/">Задачи</a><a href="/goals/">Цели</a><a href="/sphere/?id=2">Здоровье</a><a href="/aspects/">Аспекты</a></nav>
         <div class="header-actions"><div class="coin-pill" title="Мои монеты"><img src="/assets/coins.png" alt="" width="30" height="30"/><strong id="coin-balance" aria-label="Баланс монет">0</strong></div><button
           class="share"
           id="share"
@@ -40,56 +38,29 @@
           </svg>
         </button></div>
       </header>
-      <main class="profile-main">
-        <div class="page-heading">
-          <span>МОЁ ПРОСТРАНСТВО</span><span class="date-label"></span>
-        </div>
+      <main class="profile-main home">
         <article class="profile" aria-label="Профиль Дениса">
-          <div
-            class="portrait"
-            id="portrait"
-            role="img"
-            aria-label="Персонаж Дениса смотрит на вас"
-          >
+          <div class="portrait" id="portrait" role="img" aria-label="Персонаж Дениса смотрит на вас">
             <div class="portrait-halo"></div>
-            <div class="portrait-image">
-              <img src="/assets/denis.png" alt="" aria-hidden="true" />
-            </div>
+            <div class="portrait-image"><img src="/assets/denis.png" alt="" aria-hidden="true" /></div>
           </div>
           <div class="greeting">
-            <h1>
-              <span id="greeting">Доброе утро,</span><br /><span class="name"
-                >Денис.</span
-              >
-            </h1>
-            <p class="day-caption">Сегодня ваш</p>
-            <p class="day">
-              <span id="life-day">—</span><span class="day-word">день.</span>
-            </p>
+            <p class="hero-date date-label"></p>
+            <h1><span id="greeting">Доброе утро,</span> <span class="name">Денис.</span></h1>
+            <p class="day"><span class="day-caption">Сегодня</span> <span id="life-day">—</span><span class="day-word">-й день жизни</span></p>
           </div>
           <div class="abstract-mark" aria-hidden="true"></div>
-          <div class="profile-lines" aria-hidden="true"></div>
-          <button
-            class="motion"
-            id="motion"
-            aria-label="Приостановить анимацию"
-            aria-pressed="false"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.7"
-            >
-              <path d="M9 6v12M15 6v12" />
-            </svg>
-          </button>
+          <button class="motion" id="motion" aria-label="Приостановить анимацию" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 6v12M15 6v12" /></svg></button>
         </article>
-      <section class="home-stats">
-        <article class="stat-card capital-card"><span>Мой капитал · dCapital</span><strong id="capital-value">—</strong><p id="capital-status">Войди в dCapital, чтобы видеть капитал</p><div class="stat-actions"><button class="quiet-button" id="capital-refresh">Войти в dCapital</button><a class="quiet-button" href="https://dcapital.vercel.app" target="_blank" rel="noopener noreferrer">Открыть ↗</a></div></article>
-        <article class="stat-card goals-card"><span>Мои цели</span><strong id="goals-value">—</strong><p id="goals-status">Желания, цели и видение по всем аспектам</p><a href="/goals/" class="quiet-button">Открыть цели ↗</a></article>
-        <article class="stat-card"><span>Время с пользой</span><strong id="useful-value">0 <small>мин</small></strong><p>Все занятия из таймера за сегодня</p><a href="/aspects/" class="quiet-button">Открыть таймер ↗</a></article>
-      </section><section class="account-actions"><button class="quiet-button" id="open-cloud">Синхронизация</button><button class="quiet-button" id="export-data">Скачать резервную копию</button><span id="home-status" role="status"></span></section></main>
+        <section id="today" class="today" aria-label="Сегодня"></section>
+        <section class="home-stats">
+          <article class="stat-card food-card"><span>Питание сегодня</span><strong id="food-value">—</strong><p id="food-status">Посчитай свою норму калорий и белка</p><a href="/sphere/?id=2#nutrition" class="quiet-button" id="food-link">Записать еду ↗</a></article>
+          <article class="stat-card capital-card"><span>Мой капитал · dCapital</span><strong id="capital-value">—</strong><p id="capital-status">Войди в dCapital, чтобы видеть капитал</p><div class="stat-actions"><button class="quiet-button" id="capital-refresh">Войти в dCapital</button><a class="quiet-button" href="https://dcapital.vercel.app" target="_blank" rel="noopener noreferrer">Открыть ↗</a></div></article>
+          <article class="stat-card goals-card"><span>Мои цели</span><strong id="goals-value">—</strong><p id="goals-status">Желания, цели и видение по всем аспектам</p><a href="/goals/" class="quiet-button">Открыть цели ↗</a></article>
+          <article class="stat-card"><span>Время с пользой</span><strong id="useful-value">0 <small>мин</small></strong><p>Все занятия из таймера за сегодня</p><a href="/aspects/" class="quiet-button">Открыть таймер ↗</a></article>
+        </section>
+        <section class="account-actions"><button class="quiet-button" id="open-cloud">Синхронизация</button><button class="quiet-button" id="export-data">Скачать резервную копию</button><span id="home-status" role="status"></span></section>
+      </main>
     </div>
     <dialog id="share-dialog">
       <form method="dialog">

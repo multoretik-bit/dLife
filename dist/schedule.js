@@ -1,4 +1,5 @@
 import { validateStudy } from './study-model.js';
+import { validateNutrition } from './nutrition-model.js';
 export const SPHERES = [
   { id: "1", name: "Моя внешность", color: "#73EBFE" },
   { id: "2", name: "Здоровье", color: "#1101FF" },
@@ -65,6 +66,7 @@ export function remainingMinutes(block, now = new Date()) {
 }
 export function validateState(state) {
   if (!validateStudy(state?.study)) return false;
+  if (!validateNutrition(state?.nutrition)) return false;
   if (
     !state ||
     !Array.isArray(state.blocks) ||

@@ -1,6 +1,17 @@
 import { getLifeState } from "./life.js";
 const embed = location.pathname.startsWith("/embed/");
 document.body.classList.toggle("embedded", embed);
+
+// Активный раздел в навигации: «Здоровье» — сфера 2, остальные сферы — «Аспекты».
+{
+  const links = [...document.querySelectorAll(".header nav a")], path = location.pathname;
+  const byHref = (href) => links.find((a) => a.getAttribute("href") === href);
+  const sphere = new URLSearchParams(location.search).get("id");
+  const current = path === "/" ? byHref("/")
+    : path.startsWith("/sphere/") ? byHref(sphere === "2" ? "/sphere/?id=2" : "/aspects/")
+    : links.find((a) => a.getAttribute("href") !== "/" && !a.getAttribute("href").includes("?") && path.startsWith(a.getAttribute("href")));
+  for (const a of links) { a.classList.toggle("nav-current", a === current); a.toggleAttribute("aria-current", a === current); if (a === current) a.setAttribute("aria-current", "page"); }
+}
 function refresh() {
   if (!document.querySelector("#greeting")) return;
   const state = getLifeState();

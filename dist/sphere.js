@@ -2,6 +2,7 @@ import { SPHERES } from "./schedule.js";
 import { ScheduleStore } from "./store.js";
 import { mountStudy } from "./study.js";
 import { mountCalories } from "./health.js";
+import { mountNutrition } from "./nutrition.js";
 import { normalize, progressMinutes, escapeHTML as esc } from "./development.js";
 
 const $ = (s) => document.querySelector(s);
@@ -99,7 +100,7 @@ if (!sphere) {
 
   // Встраивание отдельного блока: /embed/sphere/?id=10&section=practices|calories|tools
   const legacy = { vision: "practices", goals: "practices", results: "practices" }, section = legacy[params.get("section")] || params.get("section");
-  if (location.pathname.startsWith("/embed/") && ["practices", "calories", "tools"].includes(section))
+  if (location.pathname.startsWith("/embed/") && ["practices", "calories", "nutrition", "tools"].includes(section))
     document.querySelectorAll("[data-section]").forEach((el) => (el.hidden = el.dataset.section !== section));
 
   $("#practice-add").addEventListener("click", () => { editing = "new"; renderPractices(); });
@@ -142,7 +143,11 @@ if (!sphere) {
   try {
     state = normalize(await store.load());
     render();
-    if (id === "2") mountCalories({ before: $('[data-section="practices"]'), getState: () => state, save });
+    if (id === "2") {
+      mountCalories({ before: $('[data-section="practices"]'), getState: () => state, save });
+      mountNutrition({ before: $('[data-section="calories"]'), getState: () => state, save });
+      if (location.hash === "#nutrition") $("#nutrition").scrollIntoView();
+    }
     mountStudy({ root: $("#sphere-tools"), sphereId: id, getState: () => state, save, getBackend: () => store.backend });
   } catch (e) {
     message(e.message, true);

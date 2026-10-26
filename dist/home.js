@@ -3,6 +3,8 @@ import {cloudClient,cloudConfig,configureCloud,cloudEnabled,cloudUser,joinSyncCo
 import {goalStats} from './goals-model.js';
 import {dateKey,emptyState,validateState} from './schedule.js';
 import {coinTotal,normalize} from './development.js';
+import {mountToday} from './today.js';
+import {targets, dayTotals, weightStatus} from './nutrition-model.js';
 
 const $ = s => document.querySelector(s), store = new ScheduleStore();
 let state = null, busy = false;
@@ -41,6 +43,12 @@ function render() {
   if (!state) return;
   $('#useful-value').textContent = state.logs.filter(l => l.date === dateKey()).reduce((n, l) => n + l.minutes, 0) + ' мин';
   $('#coin-balance').textContent = new Intl.NumberFormat('ru-RU',{maximumFractionDigits:2}).format(coinTotal(state));
+  const n = state.nutrition;
+  if (n?.profile && $('#food-value')) {
+    const t = targets(n.profile, weightStatus(n, dateKey()).current || n.profile.weight), day = dayTotals(n, dateKey()), left = t.kcal - day.k;
+    $('#food-value').innerHTML = `${new Intl.NumberFormat('ru-RU').format(day.k)} <small>из ${new Intl.NumberFormat('ru-RU').format(t.kcal)} ккал</small>`;
+    $('#food-status').textContent = `${left >= 0 ? `Осталось ${left} ккал` : `Сверх нормы на ${-left} ккал`} · белок ${Math.round(day.p)} из ${t.p} г`;
+  }
   const g = goalStats(state);
   if (!g.total) {
     $('#goals-value').textContent = '—';
@@ -51,9 +59,23 @@ function render() {
   }
 }
 
+// Привычки и цели на сегодня отмечаются прямо на главной.
+async function saveToday(next) {
+  try {
+    state = normalize(await store.save(next));
+    render();
+    $('#home-status').textContent = '';
+    return true;
+  } catch (e) {
+    $('#home-status').textContent = e.message;
+    return false;
+  }
+}
+
 try {
   state = normalize(await store.load());
   render();
+  if ($('#today')) mountToday({root: $('#today'), getState: () => state, save: saveToday});
 } catch (e) {
   $('#home-status').textContent = e.message;
 }

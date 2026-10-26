@@ -95,7 +95,7 @@ export function mountCalories({ before, getState, save }) {
     root.className = `sp-card hp${gold ? " is-gold" : ""}`;
     root.style.setProperty("--glow", extraPct.toFixed(3));
     root.innerHTML = `
-      <div class="sp-card-head"><h2 id="calories-title">Калории за день</h2><p class="sp-summary">${gold ? "Минимум закрыт — дальше только лучше" : `Цель — минимум ${CALORIE_GOAL} ккал`}</p></div>
+      <div class="sp-card-head"><h2 id="calories-title">🔥 Сожжено за день</h2><p class="sp-summary">${gold ? "Минимум закрыт — дальше только лучше" : `Цель — минимум ${CALORIE_GOAL} ккал`}</p></div>
       <div class="hp-body">
         <div class="hp-ring" role="progressbar" aria-label="Сожжено калорий сегодня" aria-valuenow="${kcal}" aria-valuemin="0" aria-valuemax="${CALORIE_GOAL}">
           <svg viewBox="0 0 200 200" aria-hidden="true">
