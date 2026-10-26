@@ -83,11 +83,16 @@ export default async function handler(req, res, deps = {}) {
     const preview = (v) => (v === undefined ? "нет поля" : v === "" ? "пусто" : String(Array.isArray(v) ? v.join(" | ") : v).replace(/\s+/g, " ").slice(0, 80));
     const received = { steps: preview(body.steps), kcal: preview(body.kcal ?? body.calories ?? body.activeEnergy) };
     if (typeof day === "string") return res.status(400).json({ error: day, received });
+    const hints = [];
+    // Калории ровно равны шагам — значит, во втором действии тоже стоит тип «Шаги». Такие калории не записываем.
+    if (day.kcal !== undefined && day.steps !== undefined && day.kcal === day.steps && day.steps > 0) {
+      delete day.kcal;
+      hints.push("kcal совпали с шагами — во втором «Find Health Samples» выбери тип Active Energy (Активная энергия); калории не записаны");
+    }
     const data = mergeDay(await readData(path, blob), day);
     await blob.put(path, JSON.stringify(data), { access: "private", addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", token: env.BLOB_READ_WRITE_TOKEN });
-    const hints = [];
     if (day.steps === undefined) hints.push("шаги не пришли — справа у steps должна быть переменная от действия с шагами");
-    if (/\|/.test(received.steps) || /\|/.test(received.kcal) || /\n/.test(String(body.steps ?? "") + String(body.kcal ?? ""))) hints.push("пришло несколько записей — включи в «Find Health Samples» группировку Group By: Day, чтобы был один итог за день");
+    if (/\|/.test(received.steps) || /\|/.test(received.kcal) || /\n/.test(String(body.steps ?? "") + String(body.kcal ?? ""))) hints.push("пришло несколько записей — в каждом «Find Health Samples»: Group By: Day, Fill Missing выключить, Sort by Start Date · Latest First, Limit 1");
     return res.status(200).json({ ok: true, ...day, message: `dLife: ${day.date}${day.steps !== undefined ? ` · шаги ${day.steps}` : ""}${day.kcal !== undefined ? ` · ${day.kcal} ккал` : ""}`, received, ...(hints.length ? { hint: hints.join("; ") } : {}) });
   } catch (e) {
     return res.status(502).json({ error: "Хранилище недоступно, попробуй позже: " + (e?.message || e) });

@@ -88,3 +88,13 @@ test("the token can sit right in the link, so a Shortcut needs no headers", asyn
   await handler({ method: "POST", url: `/api/health-sync/?token=${TOKEN}&date=2026-10-27&steps=500&kcal=120`, headers: {} }, res2, { env, blob });
   assert.deepEqual([res2.code, res2.body.steps, res2.body.kcal], [200, 500, 120]);
 });
+
+test("calories equal to steps are a Shortcut mix-up and are not stored", async () => {
+  const blob = fakeBlob(), res = fakeRes();
+  await handler({ method: "POST", url: `/api/health-sync/?token=${TOKEN}`, headers: {}, body: { date: "2026-10-26", steps: "4764\n0", kcal: "0\n4764" } }, res, { env, blob });
+  assert.equal(res.code, 200);
+  assert.equal(res.body.steps, 4764);
+  assert.equal(res.body.kcal, undefined);
+  assert.match(res.body.hint, /Active Energy/);
+  assert.match(res.body.hint, /Limit 1/);
+});
