@@ -1,7 +1,6 @@
 import { SPHERES } from "./schedule.js";
 import { ScheduleStore } from "./store.js";
 import { mountStudy } from "./study.js";
-import { mountCalories } from "./health.js";
 import { mountNutrition } from "./nutrition.js";
 import { normalize, progressMinutes, escapeHTML as esc } from "./development.js";
 
@@ -143,12 +142,12 @@ if (!sphere) {
   try {
     state = normalize(await store.load());
     render();
+    // Здоровье: только калории (съедено и сожжено) и занятия — без инструментов.
     if (id === "2") {
-      mountCalories({ before: $('[data-section="practices"]'), getState: () => state, save });
-      mountNutrition({ before: $('[data-section="calories"]'), getState: () => state, save });
+      mountNutrition({ before: $('[data-section="practices"]'), getState: () => state, save });
+      $("#sphere-tools").hidden = true;
       if (location.hash === "#nutrition") $("#nutrition").scrollIntoView();
-    }
-    mountStudy({ root: $("#sphere-tools"), sphereId: id, getState: () => state, save, getBackend: () => store.backend });
+    } else mountStudy({ root: $("#sphere-tools"), sphereId: id, getState: () => state, save, getBackend: () => store.backend });
   } catch (e) {
     message(e.message, true);
   }

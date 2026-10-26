@@ -1,10 +1,10 @@
 import { dateKey } from "./schedule.js";
 import { completionKey, itemDate } from "./development.js";
-import { targets, dayTotals, weightStatus, changeNutrition, WATER_GOAL, GLASS } from "./nutrition-model.js";
+import { targets, dayTotals, weightStatus } from "./nutrition-model.js";
 import { CALORIE_GOAL } from "./health.js";
 
-// Плитки дня на главной: привычки, доход (капитал), время с пользой, еда, вода, сожжённые калории.
-// Воду и калории можно добавить прямо с плитки — числом через форму.
+// Плитки дня на главной: привычки, доход (капитал), время с пользой, еда, сожжённые калории.
+// Сожжённые калории можно добавить прямо с плитки — числом через форму.
 // Разметка плиток статична (index.html), здесь только обновляются числа и кольца.
 const fmt = (n) => new Intl.NumberFormat("ru-RU").format(Math.round(n));
 const $ = (s) => document.querySelector(s);
@@ -44,16 +44,12 @@ export function updateTiles(state) {
     $("#tile-food")?.classList.toggle("is-over", left < -t.kcal * 0.05);
   } else setTile("food", { value: eaten.k ? `${fmt(eaten.k)}<small> ккал</small>` : "—", sub: "посчитай норму калорий", now: 0, max: 1 });
 
-  const water = n?.water?.[today] || 0;
-  setTile("water", { value: `${(water / 1000).toLocaleString("ru-RU")}<small> л</small>`, sub: `из ${WATER_GOAL / 1000} л · ${Math.round(water / GLASS)} ст.`, now: water, max: WATER_GOAL });
-
   const burned = state.calories?.[today] || 0;
   setTile("burn", { value: `${fmt(burned)}<small> ккал</small>`, sub: burned >= CALORIE_GOAL ? "минимум закрыт 🔥" : `сожжено · цель ${CALORIE_GOAL}`, now: burned, max: CALORIE_GOAL });
 }
 
 /** Форма на плитке: сколько добавить (или исправить итог за сегодня). */
 export const TILE_FORMS = {
-  water: { unit: "мл", max: 10000, placeholder: "например, 250", label: "Сколько воды, мл" },
   burn: { unit: "ккал", max: 20000, placeholder: "например, 300", label: "Сколько калорий сожжено" },
 };
 export const tileForm = (kind) => {
@@ -62,12 +58,11 @@ export const tileForm = (kind) => {
     <div><button class="tile-btn" name="mode" value="add">Добавить</button><button class="tile-btn is-quiet" name="mode" value="set" title="Заменить сегодняшний итог этим числом">Сделать итогом</button><button type="button" class="tile-x" data-tile-cancel aria-label="Отмена">×</button></div></form>`;
 };
 
-/** Добавляет воду или сожжённые калории за сегодня (mode "set" — исправляет итог). Возвращает новое состояние или null. */
+/** Добавляет сожжённые калории за сегодня (mode "set" — исправляет итог). Возвращает новое состояние или null. */
 export function tileChange(state, kind, amount, mode = "add") {
   const today = dateKey(), value = Math.round(Number(amount));
   if (!Number.isFinite(value) || value < 0 || (mode === "add" && value === 0)) return null;
   const total = (cur) => Math.min(TILE_FORMS[kind].max, mode === "set" ? value : cur + value);
-  if (kind === "water") return changeNutrition(state, today, (n) => { const v = total(n.water[today] || 0); if (v) n.water[today] = v; else delete n.water[today]; });
   if (kind === "burn") {
     const next = structuredClone(state), v = total(next.calories?.[today] || 0);
     next.calories = { ...next.calories, [today]: v };
