@@ -79,10 +79,16 @@ export default async function handler(req, res, deps = {}) {
     if (req.method === "GET") return res.status(200).json(await readData(path, blob));
     if (req.method !== "POST") return res.status(405).json({ error: "Только GET и POST." });
     const day = parseDay(body || {});
-    if (typeof day === "string") return res.status(400).json({ error: day });
+    // Что пришло на самом деле — чтобы по ответу в «Командах» было видно пустую или лишнюю переменную.
+    const preview = (v) => (v === undefined ? "нет поля" : v === "" ? "пусто" : String(Array.isArray(v) ? v.join(" | ") : v).replace(/\s+/g, " ").slice(0, 80));
+    const received = { steps: preview(body.steps), kcal: preview(body.kcal ?? body.calories ?? body.activeEnergy) };
+    if (typeof day === "string") return res.status(400).json({ error: day, received });
     const data = mergeDay(await readData(path, blob), day);
     await blob.put(path, JSON.stringify(data), { access: "private", addRandomSuffix: false, allowOverwrite: true, contentType: "application/json", token: env.BLOB_READ_WRITE_TOKEN });
-    return res.status(200).json({ ok: true, ...day, message: `dLife: ${day.date}${day.steps !== undefined ? ` · шаги ${day.steps}` : ""}${day.kcal !== undefined ? ` · ${day.kcal} ккал` : ""}` });
+    const hints = [];
+    if (day.steps === undefined) hints.push("шаги не пришли — справа у steps должна быть переменная от действия с шагами");
+    if (/\|/.test(received.steps) || /\|/.test(received.kcal) || /\n/.test(String(body.steps ?? "") + String(body.kcal ?? ""))) hints.push("пришло несколько записей — включи в «Find Health Samples» группировку Group By: Day, чтобы был один итог за день");
+    return res.status(200).json({ ok: true, ...day, message: `dLife: ${day.date}${day.steps !== undefined ? ` · шаги ${day.steps}` : ""}${day.kcal !== undefined ? ` · ${day.kcal} ккал` : ""}`, received, ...(hints.length ? { hint: hints.join("; ") } : {}) });
   } catch (e) {
     return res.status(502).json({ error: "Хранилище недоступно, попробуй позже: " + (e?.message || e) });
   }
