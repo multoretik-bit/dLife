@@ -30,7 +30,7 @@ export function updateTiles(state) {
   const habits = state.items.filter((i) => i.type === "habit");
   const hDone = habits.filter((h) => state.done[completionKey(h, itemDate(h, state.blocks))]).length;
   setTile("habits", habits.length
-    ? { value: `${hDone}<small>/${habits.length}</small>`, sub: hDone === habits.length ? "все отмечены 🎉" : `осталось ${habits.length - hDone}`, now: hDone, max: habits.length }
+    ? { value: `${hDone}<small>/${habits.length}</small>`, sub: hDone === habits.length ? "все отмечены" : `осталось ${habits.length - hDone}`, now: hDone, max: habits.length }
     : { value: "—", sub: "добавь первую привычку" });
 
   const minutes = state.logs.filter((l) => l.date === today).reduce((n, l) => n + l.minutes, 0);
@@ -44,8 +44,9 @@ export function updateTiles(state) {
     $("#tile-food")?.classList.toggle("is-over", left < -t.kcal * 0.05);
   } else setTile("food", { value: eaten.k ? `${fmt(eaten.k)}<small> ккал</small>` : "—", sub: "посчитай норму калорий", now: 0, max: 1 });
 
-  const burned = state.calories?.[today] || 0;
-  setTile("burn", { value: `${fmt(burned)}<small> ккал</small>`, sub: burned >= CALORIE_GOAL ? "минимум закрыт 🔥" : `сожжено · цель ${CALORIE_GOAL}`, now: burned, max: CALORIE_GOAL });
+  const burned = state.calories?.[today] || 0, steps = state.steps?.[today];
+  const burnSub = burned >= CALORIE_GOAL ? "минимум закрыт" : `сожжено · цель ${CALORIE_GOAL}`;
+  setTile("burn", { value: `${fmt(burned)}<small> ккал</small>`, sub: steps ? `${burnSub} · ${fmt(steps)} шагов` : burnSub, now: burned, max: CALORIE_GOAL });
 }
 
 /** Форма на плитке: сколько добавить (или исправить итог за сегодня). */

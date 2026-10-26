@@ -1,12 +1,13 @@
+import { icon } from './icons.js';
 // Система целей: маленькие желания, цели на текущий год и видение — идеальная картина будущего на несколько лет.
 export const GOAL_TEXT_MAX = 2000;
 export const goalYear = (now = new Date()) => now.getFullYear();
 export const visionYear = (now = new Date()) => now.getFullYear() + 1;
 
 export const KINDS = [
-  { id: 'wish', icon: '✨', title: 'Маленькие желания', hint: 'Легко внедрить — сделать на этой неделе', add: 'Новое желание' },
-  { id: 'goal', icon: '🎯', title: () => `Цели до конца ${goalYear()}`, hint: 'Конкретный результат к концу года', add: 'Новая цель' },
-  { id: 'vision', icon: '🔭', title: 'Видение на несколько лет', hint: 'Моя идеальная картинка будущего', add: 'Каким я хочу стать' },
+  { id: 'wish', icon: icon('sparkle'), title: 'Маленькие желания', hint: 'Легко внедрить — сделать на этой неделе', add: 'Новое желание' },
+  { id: 'goal', icon: icon('target'), title: () => `Цели до конца ${goalYear()}`, hint: 'Конкретный результат к концу года', add: 'Новая цель' },
+  { id: 'vision', icon: icon('vision'), title: 'Видение на несколько лет', hint: 'Моя идеальная картинка будущего', add: 'Каким я хочу стать' },
 ];
 export const kindTitle = (k) => (typeof k.title === 'function' ? k.title() : k.title);
 

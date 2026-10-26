@@ -1,3 +1,4 @@
+import { icon } from "./icons.js";
 import { SPHERES, dateKey, sphereFor } from "./schedule.js";
 import { ScheduleStore } from "./store.js";
 import { normalize, progressMinutes, escapeHTML as esc } from "./development.js";
@@ -22,7 +23,7 @@ let state = null, selected = 0, busy = false, stopAt = null, lastDay = dateKey()
 const openLogGroups = new Set();
 
 function setupTimer() {
-  $(".timer-controls").innerHTML = `<p id="timer-caption">Нажми play, когда начинаешь занятие.</p><div class="timer-icon-actions" aria-label="Управление таймером"><button id="timer-play" type="button" aria-label="Запустить таймер" title="Play">▶</button><button id="timer-pause" type="button" aria-label="Поставить таймер на паузу" title="Пауза">Ⅱ</button><button id="timer-stop" type="button" aria-label="Остановить таймер" title="Стоп">■</button><button id="manual-log" type="button" aria-label="Добавить время вручную" title="Добавить время">＋</button></div>`;
+  $(".timer-controls").innerHTML = `<p id="timer-caption">Нажми play, когда начинаешь занятие.</p><div class="timer-icon-actions" aria-label="Управление таймером"><button id="timer-play" type="button" aria-label="Запустить таймер" title="Play">${icon("play")}</button><button id="timer-pause" type="button" aria-label="Поставить таймер на паузу" title="Пауза">${icon("pause")}</button><button id="timer-stop" type="button" aria-label="Остановить таймер" title="Стоп">${icon("stop")}</button><button id="manual-log" type="button" aria-label="Добавить время вручную" title="Добавить время">${icon("plus")}</button></div>`;
   $("#session-form").innerHTML = `<label for="log-note">Что делал</label><input id="log-note" name="note" maxlength="300" required placeholder="Например, чтение" autocomplete="off"/><label for="log-minutes">Сколько минут</label><input id="log-minutes" name="minutes" type="number" min="1" max="1440" required inputmode="numeric"/><p class="field-hint">Сфера, цвет и нужная цель определятся автоматически по названию.</p><p id="session-match" class="session-match" aria-live="polite"></p><p id="session-error" role="alert"></p><button class="add-block" type="submit">Засчитать время</button><button type="button" class="quiet-button" id="session-discard">Сбросить без записи</button>`;
 }
 setupTimer();

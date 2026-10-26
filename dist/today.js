@@ -1,3 +1,4 @@
+import { icon } from "./icons.js";
 import { SPHERES, sphereFor, dateKey } from "./schedule.js";
 import { escapeHTML as esc, occurs, repeatOf, completionKey, itemDate, streak, shiftDate, setReward } from "./development.js";
 
@@ -22,7 +23,7 @@ export function mountToday({ root, getState, save }) {
       <div class="td-cols">
         <section class="td-card" id="td-habits" aria-labelledby="td-habits-title">
           <header><h2 id="td-habits-title">Привычки на сегодня</h2><a class="td-more" href="/now/">Все →</a></header>
-          ${hs.length ? habitGroups(s, hs) : `<p class="td-empty">Привычек пока нет. Создай первую в «Задачах» → ⚙ → «Привычки»: 21 день подряд — и она станет частью тебя.</p><a class="td-cta" href="/now/">Создать привычку</a>`}
+          ${hs.length ? habitGroups(s, hs) : `<p class="td-empty">Привычек пока нет. Создай первую в «Задачах» → настройки → «Привычки»: 21 день подряд — и она станет частью тебя.</p><a class="td-cta" href="/now/">Создать привычку</a>`}
         </section>
         <section class="td-card" id="td-tasks" aria-labelledby="td-tasks-title">
           <header><h2 id="td-tasks-title">Цели на сегодня</h2><a class="td-more" href="/now/">План дня →</a></header>
@@ -54,7 +55,7 @@ export function mountToday({ root, getState, save }) {
     return `<li class="td-item td-habit${done ? " is-done" : ""}" style="--c:${color}">
       <button type="button" class="td-check" data-toggle="${esc(h.id)}" data-date="${date}" role="checkbox" aria-checked="${done}" aria-label="${esc(h.name)}">${CHECK}</button>
       <div class="td-text"><strong>${esc(h.name)}</strong><span class="td-week" aria-label="Последние 7 дней">${week}</span></div>
-      <span class="td-streak${n ? "" : " is-zero"}" title="Дней подряд, цель — 21">${n >= 21 ? "✓ внедрена" : `🔥 ${n}<small>/21</small>`}</span>
+      <span class="td-streak${n ? "" : " is-zero"}" title="Дней подряд, цель — 21">${n >= 21 ? `${icon("check")} внедрена` : `${icon("flame")} ${n}<small>/21</small>`}</span>
       ${h.coins ? `<span class="td-coins">+${h.coins}</span>` : ""}</li>`;
   }
 

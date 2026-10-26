@@ -1,3 +1,4 @@
+import { icon as ic } from "./icons.js";
 import { SPHERES } from "./schedule.js";
 import { ScheduleStore } from "./store.js";
 import { normalize, escapeHTML as esc } from "./development.js";
@@ -82,7 +83,7 @@ const chip = (g) => editing === g.id ? `<li class="gd-chip-edit">${editForm(g, 2
 const chips = (list, hint) => `<ul class="gd-chips">${list.map(chip).join("") || (hint ? `<li class="gd-empty">${hint}</li>` : "")}</ul>`;
 const visionCard = (g) => editing === g.id ? `<figure class="gd-vision is-editing">${editForm(g, 5)}</figure>` : `<figure class="gd-vision${g.done ? " is-done" : ""}">
     <blockquote>${esc(g.text)}</blockquote>
-    <figcaption><button type="button" class="gd-came-true" data-toggle="${esc(g.id)}" aria-pressed="${g.done}">${g.done ? "✓ Сбылось" : "Отметить, когда сбудется"}</button><span class="gd-actions">${actions(g)}</span></figcaption></figure>`;
+    <figcaption><button type="button" class="gd-came-true" data-toggle="${esc(g.id)}" aria-pressed="${g.done}">${g.done ? `${ic("check")} Сбылось` : "Отметить, когда сбудется"}</button><span class="gd-actions">${actions(g)}</span></figcaption></figure>`;
 const visionList = (list, hint) => `<div class="gd-visions">${list.map(visionCard).join("") || (hint ? `<p class="gd-empty">${hint}</p>` : "")}</div>`;
 const goalCards = (list, hint) => `<div class="gd-goals">${list.map((g) => editing === g.id ? `<article class="gd-goal is-editing">${editForm(g)}</article>` : `<article class="gd-goal${g.done ? " is-done" : ""}">
     <button type="button" class="sp-check" data-toggle="${esc(g.id)}" role="checkbox" aria-checked="${g.done}" aria-label="${esc(g.text)}">${icon.check}</button>
@@ -186,7 +187,7 @@ function renderDetail() {
     <header class="gd-hero">
       <div class="gd-hero-top"><a href="/goals/" class="sp-back">← Мои цели</a><a class="gd-sphere-link" href="/sphere/?id=${focus.id}">Страница аспекта ↗</a></div>
       <div class="gd-title"><span class="gd-dot"></span><h1>${esc(focus.name)}</h1></div>
-      <p class="gd-stats"><span>✨ ${wishes.filter((g) => g.done).length}/${wishes.length} желаний</span><span>🎯 ${goals.filter((g) => g.done).length}/${goals.length} целей</span><span>🔭 ${visions.length} в видении</span></p>
+      <p class="gd-stats"><span>${ic("sparkle")} ${wishes.filter((g) => g.done).length}/${wishes.length} желаний</span><span>${ic("target")} ${goals.filter((g) => g.done).length}/${goals.length} целей</span><span>${ic("vision")} ${visions.length} в видении</span></p>
       <nav class="gd-nav" aria-label="Другие аспекты"><a href="/goals/?sphere=${prev.id}" style="--c:${prev.color}">← ${esc(prev.name)}</a><a href="/goals/?sphere=${next.id}" style="--c:${next.color}">${esc(next.name)} →</a></nav>
     </header>
     ${block(visionKind, visions, grouped(focus.id, "vision", visions), addForm(focus.id, visionKind))}

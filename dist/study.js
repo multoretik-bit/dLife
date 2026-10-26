@@ -324,7 +324,7 @@ export function mountStudy({ root, sphereId, getState, save, getBackend }) {
     else if (d.section) { category = d.section; page = 0; drawBooks(); body.querySelector('.lib-sections').scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'nearest' }); }
     else if (d.page) { page += Number(d.page); drawBooks(); body.querySelector('.lib-toolbar').scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' }); }
     else if (d.markRead) await moveBook(d.markRead, b.closest('[data-book]'), 'read', '✓', 'прочитана');
-    else if (d.start) await moveBook(d.start, b.closest('[data-book]'), 'reading', '📖', 'теперь в «Читаю сейчас»');
+    else if (d.start) await moveBook(d.start, b.closest('[data-book]'), 'reading', '✓', 'теперь в «Читаю сейчас»');
     else if (d.setStatus) { if (await commit((s) => (s.books.find((x) => x.id === d.setStatus).status = d.value))) { renderLibrary(); if (d.value === 'planned') status.textContent = 'Книга вернулась в план чтения.'; } }
     else if (d.undo) { if (await commit((s) => (s.books.find((x) => x.id === d.undo).status = d.prev))) { renderLibrary(); status.textContent = 'Вернул как было.'; } }
     else if (d.unread) { if (await commit((s) => (s.books.find((x) => x.id === d.unread).status = 'planned'))) { renderLibrary(); status.textContent = 'Книга вернулась в план чтения.'; } }

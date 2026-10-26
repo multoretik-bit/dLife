@@ -558,3 +558,60 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; }
   .nt-week-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .nt-week-stats b { font-size: 17px; }
 }
+
+/* ---------- Иконки dLife (icons.js): линия 1.8, скруглённые концы, размер 1em ---------- */
+svg.ic { display: inline-block; width: 1em; height: 1em; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; vertical-align: -0.14em; overflow: visible; }
+
+/* ---------- Шаги и Apple Watch ---------- */
+.nt-rings { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.nt-big.is-steps { --c: #14b8a6; --track: #d5f3ef; }
+.nt-cta.is-steps { background: color-mix(in srgb, #14b8a6 14%, #fff); color: #0d7f73; }
+.nt-cta.is-steps:hover { background: color-mix(in srgb, #14b8a6 22%, #fff); }
+.nt-cta svg.ic, .nt-watch-btn svg.ic { margin-right: 6px; font-size: 17px; }
+.nt-sync-note { display: inline-flex; align-items: center; gap: 6px; min-height: 42px; color: #0d7f73; font-size: 13.5px; font-weight: 700; }
+.nt-head { align-items: center; }
+.nt-head > div:first-child { flex: 1 1 200px; }
+.nt-head p svg.ic.is-streak { color: #ef5a3a; }
+.nt-watch-btn { display: inline-flex; align-items: center; min-height: 40px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--ink-2); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.nt-watch-btn:hover { border-color: #14b8a6; color: var(--ink); }
+.nt-watch-btn.is-on { border-color: color-mix(in srgb, #14b8a6 45%, var(--line)); color: #0d7f73; }
+.nt-watch { border-color: color-mix(in srgb, #14b8a6 30%, var(--line)); background: linear-gradient(180deg, #f2fbfa, #fff 50%); }
+.nt-watch header b { color: var(--muted); font-size: 13px; font-weight: 700; }
+.nt-watch header b.is-ok { color: #0d7f73; }
+.nt-watch h3 svg.ic { margin-right: 6px; color: #0d7f73; }
+.nt-copy { display: grid; grid-template-columns: 70px minmax(0, 1fr) auto; align-items: center; gap: 8px; margin: 6px 0; }
+.nt-copy span { color: var(--muted); font-size: 13px; font-weight: 700; }
+.nt-copy input { min-width: 0; min-height: 40px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 13px; }
+.nt-steps { display: grid; gap: 8px; margin: 12px 0 8px; padding-left: 22px; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+.nt-steps b { color: var(--ink); }
+.nt-steps code { padding: 1px 6px; border-radius: 6px; background: var(--soft); color: var(--ink); font-size: 12.5px; }
+.nt-watch-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.nt-ai-note svg.ic { color: var(--orange); margin-right: 4px; }
+.nt-photo-btn span svg.ic { font-size: 26px; }
+.nt-sheet-card > header h3 svg.ic { margin-right: 6px; color: var(--orange); }
+.td-streak svg.ic { color: #ef7a1a; margin-right: 2px; }
+/* Цели: цвета иконок разделов */
+.gl-wish, .gk-hero.gl-wish, .gd-b-wish { --kind: #e0679a; }
+.gl-goal, .gk-hero.gl-goal, .gd-b-goal { --kind: #3a6dff; }
+.gl-vision, .gk-hero.gl-vision, .gd-b-vision { --kind: #8a63d2; }
+.gl-tier-icon, .gd-ico, .gk-switch a svg.ic { color: var(--kind, var(--ink)); }
+.gd-stats svg.ic { margin-right: 4px; }
+.gd-stats span:nth-child(1) svg.ic { color: #e0679a; }
+.gd-stats span:nth-child(2) svg.ic { color: #3a6dff; }
+.gd-stats span:nth-child(3) svg.ic { color: #8a63d2; }
+.timer-icon-actions button svg.ic { font-size: 20px; }
+@media (max-width: 900px) {
+  .nt-rings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .nt-big.is-steps { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  .nt-big.is-steps { grid-template-columns: auto 1fr; justify-items: start; text-align: left; column-gap: 14px; }
+  .nt-big.is-steps .nt-ring { grid-row: 1 / 5; width: 96px; height: 96px; margin: 0; }
+  .nt-big.is-steps .nt-ring b { font-size: 20px; }
+  .nt-copy { grid-template-columns: 1fr auto; }
+  .nt-copy span { grid-column: 1 / -1; }
+}
+/* Иконка в центре кольца плитки — без поворота и растяжения кольца */
+.tile-ring > span svg.ic { width: 1em; height: 1em; transform: none; }
+.tile-ring > span { font-size: 22px; }
+@media (max-width: 760px) { .tile-ring > span { font-size: 17px; } }

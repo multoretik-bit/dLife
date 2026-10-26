@@ -3,10 +3,10 @@
 // Запись дневника: { id, meal: b|l|d|s, name, g, k, p, f, c, food? } — g граммов (0 — «быстрые калории»), k/p/f/c — уже посчитанные на порцию.
 
 export const MEALS = [
-  { id: "b", name: "Завтрак", icon: "☀️" },
-  { id: "l", name: "Обед", icon: "🍲" },
-  { id: "d", name: "Ужин", icon: "🌙" },
-  { id: "s", name: "Перекусы", icon: "🍎" },
+  { id: "b", name: "Завтрак" },
+  { id: "l", name: "Обед" },
+  { id: "d", name: "Ужин" },
+  { id: "s", name: "Перекусы" },
 ];
 export const ACTIVITY = [
   { id: "sedentary", k: 1.2, name: "Сидячий", hint: "офис, почти без спорта" },
