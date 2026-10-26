@@ -32,7 +32,8 @@ export function parseDay(body, now = new Date()) {
     if (!(steps >= 0 && steps <= 200000)) return "Шаги — число от 0 до 200 000.";
     out.steps = Math.round(steps);
   }
-  if ((body?.kcal ?? body?.calories ?? body?.activeEnergy) !== undefined) {
+  const rawKcal = body?.kcal ?? body?.calories ?? body?.activeEnergy;
+  if (rawKcal !== undefined && rawKcal !== "") {
     if (!(kcal >= 0 && kcal <= 20000)) return "Калории — число от 0 до 20 000.";
     out.kcal = Math.round(kcal);
   }
@@ -67,7 +68,11 @@ export default async function handler(req, res, deps = {}) {
   if (!env.BLOB_READ_WRITE_TOKEN) return res.status(503).json({ error: "Хранилище для Apple Watch не подключено (BLOB_READ_WRITE_TOKEN)." });
   let body = req.body;
   if (typeof body === "string") { try { body = JSON.parse(body || "{}"); } catch { return res.status(400).json({ error: "Тело запроса должно быть JSON." }); } }
-  const token = String(req.headers["x-health-token"] || body?.token || "").trim();
+  // Токен (и при желании steps/kcal/date) можно передать прямо в адресе: ?token=…
+  // Так в «Командах» не нужны заголовки — достаточно вставить одну ссылку.
+  const query = Object.fromEntries(new URL(req.url || "/", "http://local").searchParams);
+  body = { ...query, ...(body && typeof body === "object" ? body : {}) };
+  const token = String(req.headers["x-health-token"] || body.token || "").trim();
   if (!TOKEN.test(token)) return res.status(401).json({ error: "Нужен токен Apple Watch из dLife («Здоровье» → Apple Watch)." });
   const path = blobPath(token);
   try {

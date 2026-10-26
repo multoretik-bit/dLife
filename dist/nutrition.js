@@ -150,9 +150,11 @@ export function mountNutrition({ before, getState, save }) {
     return `<h4>Популярное</h4><ul class="nt-results">${["eg-egg", "gr-oat-water", "mt-chicken-boiled", "gr-buckwheat", "dy-cottage-5", "fr-banana", "dr-cappuccino", "vg-salad-oil"].map((id) => foodItem(findFood(id))).join("")}</ul>`;
   }
 
+  const watchLink = (token) => `${location.origin}/api/health-sync/?token=${encodeURIComponent(token)}`;
+
   /** Панель Apple Watch: подключение, токен и адрес для «Команд», пошаговая инструкция. */
   function watchPanel() {
-    const sync = getState().healthSync, url = `${location.origin}/api/health-sync/`;
+    const sync = getState().healthSync, url = sync ? watchLink(sync.token) : "";
     if (!sync) return `<section class="nt-box nt-watch">
       <header><h3>${icon("watch")} Шаги и калории с Apple Watch</h3></header>
       <p class="nt-hint">Часы записывают шаги и активные калории в «Здоровье» на iPhone. Команда на iPhone будет сама отправлять их в dLife несколько раз в день — вручную вводить не нужно.</p>
@@ -163,15 +165,16 @@ export function mountNutrition({ before, getState, save }) {
     return `<section class="nt-box nt-watch">
       <header><h3>${icon("watch")} Apple Watch</h3><b class="${last ? "is-ok" : ""}">${last ? `данные от ${last}` : "данных ещё не было"}</b></header>
       ${watchInfo?.error ? `<p class="nt-ai-error">${esc(watchInfo.error)}</p>` : ""}
-      ${field("url", url, "Адрес")}
-      ${field("token", sync.token, "Токен")}
+      ${field("url", url, "Ссылка для команды")}
+      <p class="nt-hint">Токен уже внутри ссылки — заголовки в команде не нужны. Ссылку никому не показывай.</p>
       <ol class="nt-steps">
-        <li>На iPhone открой <b>«Команды»</b> → <b>＋</b> → назови команду <b>«dLife»</b>.</li>
-        <li>Добавь действие <b>«Найти образцы здоровья»</b> (Find Health Samples): тип — <b>Шаги</b>, «Дата начала» — <b>сегодня</b>.</li>
-        <li>Ещё раз <b>«Найти образцы здоровья»</b>: тип — <b>Активная энергия</b>, «Дата начала» — <b>сегодня</b>.</li>
-        <li>Добавь <b>«Получить содержимое URL»</b> (Get Contents of URL): адрес — из поля выше, метод <b>POST</b>.<br>Заголовки: <code>X-Health-Token</code> = токен из поля выше.<br>Тело запроса — <b>JSON</b>: поле <code>steps</code> = результат шага 2, поле <code>kcal</code> = результат шага 3. Сумму записей dLife посчитает сам.</li>
-        <li>Запусти команду — внизу появится ответ «dLife: …». Здесь нажми «Проверить».</li>
-        <li><b>«Автоматизация»</b> → <b>«Время суток»</b>: 12:00, 18:00 и 23:30 → выбери команду «dLife» → <b>«Запускать сразу»</b>. Можно добавить и «Тренировка Apple Watch» → «Завершается».</li>
+        <li>На iPhone: <b>«Команды»</b> → <b>＋</b> (новая команда).</li>
+        <li><b>«Добавить действие»</b> → найди <b>«Найти образцы здоровья»</b>. Нажми на синее слово типа и выбери <b>«Шаги»</b>. Ниже: <b>«Дата начала» — «Сегодня»</b>.</li>
+        <li>Ещё одно действие <b>«Найти образцы здоровья»</b>: тип — <b>«Активная энергия»</b>, «Дата начала» — <b>«Сегодня»</b>.</li>
+        <li>Добавь действие <b>«Получить содержимое URL»</b>. Нажми на синее слово <b>«URL»</b> и <b>вставь ссылку</b> из поля выше (кнопка «Копировать» рядом).</li>
+        <li>В этом же действии нажми стрелку <b>«›» / «Показать больше»</b>:<br>• <b>Метод</b> → <b>POST</b><br>• <b>Тело запроса</b> → <b>JSON</b><br>• <b>«Добавить новое поле»</b> → «Текст»: ключ <code>steps</code>, значение — нажми и выбери переменную <b>«Образцы здоровья»</b> из шага 2;<br>• ещё поле «Текст»: ключ <code>kcal</code>, значение — <b>«Образцы здоровья»</b> из шага 3.<br>«Заголовки» не трогай.</li>
+        <li>Нажми кнопку запуска (треугольник внизу справа) — команда ответит «dLife: …». Здесь нажми <b>«Проверить»</b>.</li>
+        <li><b>«Автоматизация»</b> → <b>＋</b> → <b>«Время суток»</b> (например 12:00, 18:00, 23:30) → <b>«Запускать сразу»</b> → выбери эту команду.</li>
       </ol>
       <p class="nt-hint">Пока iPhone заблокирован, iOS не даёт читать «Здоровье» — такой запуск пропустится, данные догонит следующий. Каждая отправка ставит итог дня, а не прибавляет.</p>
       <div class="nt-watch-actions"><button type="button" class="nt-cta" data-watch-check ${watchBusy ? "disabled" : ""}>${icon("refresh")} ${watchBusy ? "Проверяю…" : "Проверить"}</button><button type="button" class="nt-cta is-quiet" data-watch-off>Отключить</button></div>
@@ -312,7 +315,7 @@ export function mountNutrition({ before, getState, save }) {
       busy = true; try { await save(next); } finally { busy = false; watchInfo = null; render(); }
     }
     else if (d.copy) {
-      const value = d.copy === "token" ? getState().healthSync?.token : `${location.origin}/api/health-sync/`;
+      const value = watchLink(getState().healthSync?.token || "");
       try { await navigator.clipboard.writeText(value); } catch { b.previousElementSibling?.select(); }
       copied = d.copy; render(); setTimeout(() => { copied = ""; render(); }, 1600);
     }

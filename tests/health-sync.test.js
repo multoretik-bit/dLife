@@ -77,3 +77,14 @@ test("the sync token in state is validated", () => {
   assert.equal(validateState({ ...emptyState(), healthSync: { token: "bad token" } }), false);
   assert.equal(validateState({ ...emptyState(), healthSync: [] }), false);
 });
+
+test("the token can sit right in the link, so a Shortcut needs no headers", async () => {
+  const blob = fakeBlob(), res = fakeRes();
+  await handler({ method: "POST", url: `/api/health-sync/?token=${TOKEN}`, headers: {}, body: { date: "2026-10-26", steps: "1200\n3400", kcal: "" } }, res, { env, blob });
+  assert.equal(res.code, 200, JSON.stringify(res.body));
+  assert.equal(res.body.steps, 4600);
+  assert.equal(res.body.kcal, undefined, "пустое поле калорий просто пропускается");
+  const res2 = fakeRes();
+  await handler({ method: "POST", url: `/api/health-sync/?token=${TOKEN}&date=2026-10-27&steps=500&kcal=120`, headers: {} }, res2, { env, blob });
+  assert.deepEqual([res2.code, res2.body.steps, res2.body.kcal], [200, 500, 120]);
+});
