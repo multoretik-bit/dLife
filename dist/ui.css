@@ -618,3 +618,5 @@ svg.ic { display: inline-block; width: 1em; height: 1em; flex: none; fill: none;
 
 /* Пока Apple Watch выключен — два круга (съедено, сожжено) */
 .nt-rings:not(:has(.is-steps)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* Время у привычки (например, 20:30 · Испанский) */
+.td-text strong time { margin-right: 4px; color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; }

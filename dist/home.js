@@ -4,6 +4,7 @@ import {dateKey,emptyState,validateState} from './schedule.js';
 import {coinTotal,normalize} from './development.js';
 import {mountToday} from './today.js';
 import {updateTiles, tileForm, tileChange} from './tiles.js';
+import {applySeeds} from './seeds.js';
 import {pullWatch, WATCH_ENABLED, undoWatchDay} from './watch.js';
 
 const $ = s => document.querySelector(s), store = new ScheduleStore();
@@ -60,6 +61,9 @@ async function saveToday(next) {
 
 try {
   state = normalize(await store.load());
+  // Разовые добавления (вечерняя учёба) — до отрисовки, чтобы сразу были видны.
+  const seeded = applySeeds(state);
+  if (seeded && await saveToday(seeded)) $('#home-status').textContent = 'Добавил вечернюю учёбу: 20:00 история, 20:30 испанский, 21:00 английский.';
   render();
   if ($('#today')) mountToday({root: $('#today'), getState: () => state, save: saveToday});
   // Свежие шаги и калории с Apple Watch (если часы подключены в «Здоровье»).

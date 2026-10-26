@@ -54,7 +54,7 @@ export function mountToday({ root, getState, save }) {
     const week = Array.from({ length: 7 }, (_, i) => shiftDate(date, i - 6)).map((d) => `<i class="${s.done[completionKey(h, d)] ? "on" : ""}" title="${d}"></i>`).join("");
     return `<li class="td-item td-habit${done ? " is-done" : ""}" style="--c:${color}">
       <button type="button" class="td-check" data-toggle="${esc(h.id)}" data-date="${date}" role="checkbox" aria-checked="${done}" aria-label="${esc(h.name)}">${CHECK}</button>
-      <div class="td-text"><strong>${esc(h.name)}</strong><span class="td-week" aria-label="Последние 7 дней">${week}</span></div>
+      <div class="td-text"><strong>${h.time ? `<time>${h.time}</time> ` : ""}${esc(h.name)}</strong><span class="td-week" aria-label="Последние 7 дней">${week}</span></div>
       <span class="td-streak${n ? "" : " is-zero"}" title="Дней подряд, цель — 21">${n >= 21 ? `${icon("check")} внедрена` : `${icon("flame")} ${n}<small>/21</small>`}</span>
       ${h.coins ? `<span class="td-coins">+${h.coins}</span>` : ""}</li>`;
   }

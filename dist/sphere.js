@@ -3,6 +3,7 @@ import { ScheduleStore } from "./store.js";
 import { mountStudy } from "./study.js";
 import { mountNutrition } from "./nutrition.js";
 import { normalize, progressMinutes, escapeHTML as esc } from "./development.js";
+import { applySeeds } from "./seeds.js";
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
@@ -141,6 +142,8 @@ if (!sphere) {
 
   try {
     state = normalize(await store.load());
+    const seeded = applySeeds(state);
+    if (seeded) try { state = normalize(await store.save(seeded)); } catch {}
     render();
     // Здоровье: только калории (съедено и сожжено) и занятия — без инструментов.
     if (id === "2") {

@@ -7,6 +7,7 @@ import {
   dateKey,
 } from "./schedule.js";
 import { ScheduleStore } from "./store.js";
+import { applySeeds } from "./seeds.js";
 import {
   escapeHTML as esc,
   occurs,
@@ -40,6 +41,8 @@ function notice(message, error = false) {
 async function load() {
   try {
     state = await store.load();
+    const seeded = applySeeds(state);
+    if (seeded) try { state = await store.save(seeded); } catch {}
     $("#load-error").hidden = true;
     render();
   } catch (e) {
@@ -56,7 +59,7 @@ function row(item, date = itemDate(item, state.blocks)) {
   const coinsBadge = item.coins
     ? `<span class="task-coin-badge" title="Награда: ${item.coins} монет">+${item.coins}<img class="coin-inline" src="/assets/coins.png" alt="монет"/></span>`
     : "";
-  return `<div class="activity-wrap" style="--item-color:${s.color}"><label class="activity-row"><input type="checkbox" data-item="${esc(item.id)}" data-date="${date}" ${done ? "checked" : ""} ${busy || date > dateKey() ? "disabled" : ""}><span class="activity-check"></span><span class="activity-name">${esc(item.name)}${coinsBadge}${item.type === "task" && (item.time || REPEAT_LABEL[repeatOf(item)]) ? `<small>${[item.time, REPEAT_LABEL[repeatOf(item)]].filter(Boolean).join(" · ")}</small>` : ""}</span><span class="sphere-dot" title="${esc(s.name)}"></span></label>${item.type === "habit" ? habitBar(item, state.done, date) : ""}</div>`;
+  return `<div class="activity-wrap" style="--item-color:${s.color}"><label class="activity-row"><input type="checkbox" data-item="${esc(item.id)}" data-date="${date}" ${done ? "checked" : ""} ${busy || date > dateKey() ? "disabled" : ""}><span class="activity-check"></span><span class="activity-name">${esc(item.name)}${coinsBadge}${item.type === "task" && (item.time || REPEAT_LABEL[repeatOf(item)]) ? `<small>${[item.time, REPEAT_LABEL[repeatOf(item)]].filter(Boolean).join(" · ")}</small>` : item.type === "habit" && item.time ? `<small>${item.time}</small>` : ""}</span><span class="sphere-dot" title="${esc(s.name)}"></span></label>${item.type === "habit" ? habitBar(item, state.done, date) : ""}</div>`;
 }
 const rows = (items, date) =>
   items.length
