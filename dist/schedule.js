@@ -118,6 +118,8 @@ export function validateState(state) {
     if (i.repeat !== undefined && !["daily", "weekly", "until"].includes(i.repeat)) return false;
     if (i.repeat === "weekly" && !i.weekly) return false;
     if (i.doneOn !== undefined && !validDate(i.doneOn)) return false;
+    // Шкала прогресса привычки (habit-progress.js): количество или минуты занятия
+    if (i.progress !== undefined) { const p = i.progress; if (!p || typeof p !== 'object' || (p.kind === 'count' ? !Number.isInteger(p.target) || p.target < 1 || p.target > 100000 || typeof p.unit !== 'string' || p.unit.length > 16 : p.kind === 'minutes' ? typeof p.practiceId !== 'string' || !p.practiceId || p.practiceId.length > 120 : true)) return false; }
     itemIds.add(i.id);
   }
   if (!validateDevelopment(state)) return false;
@@ -131,7 +133,7 @@ export function validateState(state) {
   if(state.healthSync!==undefined&&(!state.healthSync||typeof state.healthSync!=='object'||Array.isArray(state.healthSync)||!/^[A-Za-z0-9_-]{24,80}$/.test(state.healthSync.token||'')||(state.healthSync.lastAt!==undefined&&(typeof state.healthSync.lastAt!=='string'||state.healthSync.lastAt.length>40))))return false;
   if(state.calories!==undefined&&(!state.calories||Array.isArray(state.calories)||typeof state.calories!=='object'||Object.entries(state.calories).some(([k,v])=>!validDate(k)||!Number.isInteger(v)||v<0||v>20000)))return false;
   if(state.logs?.some(l=>l.coinRate!==undefined&&!amount(l.coinRate)))return false;
-  // Прогресс-бары дня (bars.js): количество или минуты занятия; counts — значения по дням
+  // Старые отдельные прогресс-бары (до 28.10.2026, переносятся в привычки); counts — количество по дням
   if(state.bars!==undefined&&(!Array.isArray(state.bars)||state.bars.length>30||new Set(state.bars.map(b=>b?.id)).size!==state.bars.length||state.bars.some(b=>!b||typeof b.id!=='string'||!b.id||b.id.length>80||!['count','minutes'].includes(b.kind)||typeof b.name!=='string'||!b.name.trim()||b.name.length>60||!SPHERES.some(s=>s.id===b.sphereId)||(b.kind==='count'&&(!Number.isInteger(b.target)||b.target<1||b.target>100000||typeof b.unit!=='string'||b.unit.length>16))||(b.kind==='minutes'&&(typeof b.practiceId!=='string'||!b.practiceId))||(b.habitId!==undefined&&(typeof b.habitId!=='string'||b.habitId.length>80)))))return false;
   if(state.counts!==undefined&&(!state.counts||typeof state.counts!=='object'||Array.isArray(state.counts)||Object.entries(state.counts).some(([k,day])=>!validDate(k)||!day||typeof day!=='object'||Array.isArray(day)||Object.entries(day).some(([id,v])=>id.length>80||!Number.isInteger(v)||v<0||v>100000))))return false;
   if(state.timer?.practiceId!==undefined&&(typeof state.timer.practiceId!=='string'||state.timer.practiceId.length>120))return false;

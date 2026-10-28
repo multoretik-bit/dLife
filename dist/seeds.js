@@ -1,4 +1,5 @@
 import { validateBlock, overlaps, minutes } from "./schedule.js";
+import { barsIntoHabits } from "./habit-progress.js";
 
 // Разовые добавления по просьбе Дениса. Каждое применяется один раз (id попадает в state.applied),
 // поэтому удалённое потом не возвращается.
@@ -15,7 +16,9 @@ const SUBJECTS = [
 /** Все разовые добавления по порядку. Возвращает новое состояние или null, если менять нечего. */
 export function applySeeds(state) {
   const a = addEveningStudy(state), b = moveStudyIntoBlock(a || state), c = addDayBars(b || a || state);
-  return c || b || a;
+  // 28.10.2026: отдельные прогресс-бары переехали внутрь привычек (шкала в строке привычки).
+  const d = barsIntoHabits(c || b || a || state);
+  return d || c || b || a;
 }
 
 // 28.10.2026 — прогресс-бары на главной: 50 отжиманий в день и по 30 минут истории, испанского и английского
