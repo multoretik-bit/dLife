@@ -5,6 +5,7 @@ import {coinTotal,normalize} from './development.js';
 import {mountToday} from './today.js';
 import {updateTiles, tileForm, tileChange} from './tiles.js';
 import {applySeeds} from './seeds.js';
+import {mountBars} from './bars.js';
 import {pullWatch, WATCH_ENABLED, undoWatchDay} from './watch.js';
 
 const $ = s => document.querySelector(s), store = new ScheduleStore();
@@ -63,9 +64,12 @@ try {
   state = normalize(await store.load());
   // Разовые добавления (вечерняя учёба) — до отрисовки, чтобы сразу были видны.
   const seeded = applySeeds(state);
-  if (seeded && await saveToday(seeded)) $('#home-status').textContent = 'Добавил вечернюю учёбу: 20:00 история, 20:30 испанский, 21:00 английский.';
+  if (seeded && await saveToday(seeded)) $('#home-status').textContent = 'Добавил прогресс-бары: 50 отжиманий и по 30 минут истории, испанского и английского.';
   render();
-  if ($('#today')) mountToday({root: $('#today'), getState: () => state, save: saveToday});
+  // Прогресс дня (отжимания, минуты учёбы по таймеру) и «Сегодня» обновляют друг друга: полный бар отмечает привычку.
+  let todayView = null, barsView = null;
+  if ($('#bars')) barsView = mountBars({root: $('#bars'), getState: () => state, save: async next => { const ok = await saveToday(next); todayView?.render(); return ok; }, onError: msg => { $('#home-status').textContent = msg; }});
+  if ($('#today')) todayView = mountToday({root: $('#today'), getState: () => state, save: async next => { const ok = await saveToday(next); barsView?.render(); return ok; }});
   // Свежие шаги и калории с Apple Watch (если часы подключены в «Здоровье»).
   if (WATCH_ENABLED) pullWatch(() => state, saveToday);
   else { const fixed = undoWatchDay(state); if (fixed && await saveToday(fixed)) $('#home-status').textContent = 'Вернул калории за 26 октября: 55 ккал.'; }

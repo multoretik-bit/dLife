@@ -14,8 +14,36 @@ const SUBJECTS = [
 
 /** Все разовые добавления по порядку. Возвращает новое состояние или null, если менять нечего. */
 export function applySeeds(state) {
-  const a = addEveningStudy(state), b = moveStudyIntoBlock(a || state);
-  return b || a;
+  const a = addEveningStudy(state), b = moveStudyIntoBlock(a || state), c = addDayBars(b || a || state);
+  return c || b || a;
+}
+
+// 28.10.2026 — прогресс-бары на главной: 50 отжиманий в день и по 30 минут истории, испанского и английского
+// (минуты идут из таймера). Норма английского — 30 минут («в каждом минимум 30»).
+export const BARS_SEED = "day-bars-2026-10-28";
+const BAR_SUBJECTS = [
+  { key: "history", name: "История", match: /истори/i },
+  { key: "spanish", name: "Испанский", match: /испан/i },
+  { key: "english", name: "Английский", match: /англ/i },
+];
+
+export function addDayBars(state) {
+  if (!state || (state.applied || []).includes(BARS_SEED)) return null;
+  const next = structuredClone(state);
+  next.applied = [...(next.applied || []), BARS_SEED];
+  next.bars = [...(next.bars || [])];
+  next.practices = (next.practices || []).map((p) => ({ ...p }));
+  if (!next.bars.some((b) => /отжим/i.test(b.name))) next.bars.push({ id: "bar-pushups", kind: "count", name: "Отжимания", target: 50, unit: "раз", sphereId: "2" });
+  const rate = next.practices.find((x) => x.sphereId === "10" && /англ/i.test(x.name))?.coinRate ?? 1;
+  for (const s of BAR_SUBJECTS) {
+    let p = next.practices.find((x) => x.sphereId === "10" && s.match.test(x.name));
+    if (p) p.target = 30;
+    else { p = { id: `practice-study-${s.key}`, sphereId: "10", name: s.name, target: 30, coinRate: rate }; next.practices.push(p); }
+    const habit = next.items.find((i) => i.type === "habit" && s.match.test(i.name));
+    if (habit && s.key === "english") habit.name = habit.name.replace(/\d+\s*минут\S*/i, "30 минут");
+    if (!next.bars.some((b) => b.practiceId === p.id)) next.bars.push({ id: `bar-${s.key}`, kind: "minutes", name: s.name, sphereId: "10", practiceId: p.id, ...(habit ? { habitId: habit.id } : {}) });
+  }
+  return next;
 }
 
 // 26.10.2026 — предметы оказались «на весь день», потому что 20:00–22:00 уже занимал учебный блок Дениса:

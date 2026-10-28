@@ -8,9 +8,9 @@ test("evening study is added once: 2-hour block, three subject habits and study 
   const next = applySeeds(state);
   assert.ok(validateState(next));
   assert.deepEqual(next.blocks.map((b) => `${b.name} ${b.start}-${b.end}`), ["Учёба 20:00-22:00"]);
-  assert.deepEqual(next.items.map((i) => `${i.time} ${i.name} ${i.blockId}`), ["20:00 История — 30 минут study-evening", "20:30 Испанский — 30 минут study-evening", "21:00 Английский — 60 минут study-evening"]);
+  assert.deepEqual(next.items.map((i) => `${i.time} ${i.name} ${i.blockId}`), ["20:00 История — 30 минут study-evening", "20:30 Испанский — 30 минут study-evening", "21:00 Английский — 30 минут study-evening"]); // с 28.10 норма английского — 30 минут (прогресс-бары)
   const norms = Object.fromEntries(next.practices.filter((p) => p.sphereId === "10").map((p) => [p.name, p.target]));
-  assert.deepEqual(norms, { "Английский": 60, "Чтение": 50, "История": 30, "Испанский": 30 });
+  assert.deepEqual(norms, { "Английский": 30, "Чтение": 50, "История": 30, "Испанский": 30 });
   assert.equal(next.practices.filter((p) => /англ/i.test(p.name)).length, 1, "английский не задваивается");
   assert.ok(next.applied.includes(STUDY_SEED));
   assert.equal(applySeeds(next), null, "второй раз ничего не добавляет");

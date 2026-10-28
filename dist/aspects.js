@@ -150,7 +150,10 @@ $("#timer-stop").addEventListener("click", () => { if (!state?.timer) return; st
 $("#manual-log").addEventListener("click", () => { stopAt = null; openSession(30, false); });
 
 function openSession(minutes, stopping) {
-  $("#session-form").reset(); $("#log-minutes").value = minutes; $("#session-match").textContent = ""; $("#session-error").textContent = ""; $("#session-discard").hidden = !stopping; $("#session-dialog").showModal(); $("#log-note").focus();
+  $("#session-form").reset(); $("#log-minutes").value = minutes;
+  // Таймер, запущенный с прогресс-бара на главной, уже знает занятие.
+  const barPractice = stopping && state?.timer?.practiceId && state.practices.find((p) => p.id === state.timer.practiceId);
+  if (barPractice) setTimeout(() => { $("#log-note").value = barPractice.name; $("#log-note").dispatchEvent(new Event("input")); }, 0); $("#session-match").textContent = ""; $("#session-error").textContent = ""; $("#session-discard").hidden = !stopping; $("#session-dialog").showModal(); $("#log-note").focus();
 }
 $("#log-note").addEventListener("input", (event) => { if (!event.target.value.trim()) { $("#session-match").textContent = ""; return; } const match = matchActivity(event.target.value); $("#session-match").textContent = match.practice ? `Будет засчитано: ${match.practice.name} · ${match.sphere.name}` : `Новая запись · ${match.sphere.name}`; $("#session-match").style.setProperty("--match-color", match.sphere.color); });
 $("#session-discard").addEventListener("click", async () => { if (busy || !state?.timer) return; const next = structuredClone(state); next.timer = null; stopAt = null; if (await commit(next)) $("#session-dialog").close(); });

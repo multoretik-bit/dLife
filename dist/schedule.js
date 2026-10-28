@@ -131,6 +131,10 @@ export function validateState(state) {
   if(state.healthSync!==undefined&&(!state.healthSync||typeof state.healthSync!=='object'||Array.isArray(state.healthSync)||!/^[A-Za-z0-9_-]{24,80}$/.test(state.healthSync.token||'')||(state.healthSync.lastAt!==undefined&&(typeof state.healthSync.lastAt!=='string'||state.healthSync.lastAt.length>40))))return false;
   if(state.calories!==undefined&&(!state.calories||Array.isArray(state.calories)||typeof state.calories!=='object'||Object.entries(state.calories).some(([k,v])=>!validDate(k)||!Number.isInteger(v)||v<0||v>20000)))return false;
   if(state.logs?.some(l=>l.coinRate!==undefined&&!amount(l.coinRate)))return false;
+  // Прогресс-бары дня (bars.js): количество или минуты занятия; counts — значения по дням
+  if(state.bars!==undefined&&(!Array.isArray(state.bars)||state.bars.length>30||new Set(state.bars.map(b=>b?.id)).size!==state.bars.length||state.bars.some(b=>!b||typeof b.id!=='string'||!b.id||b.id.length>80||!['count','minutes'].includes(b.kind)||typeof b.name!=='string'||!b.name.trim()||b.name.length>60||!SPHERES.some(s=>s.id===b.sphereId)||(b.kind==='count'&&(!Number.isInteger(b.target)||b.target<1||b.target>100000||typeof b.unit!=='string'||b.unit.length>16))||(b.kind==='minutes'&&(typeof b.practiceId!=='string'||!b.practiceId))||(b.habitId!==undefined&&(typeof b.habitId!=='string'||b.habitId.length>80)))))return false;
+  if(state.counts!==undefined&&(!state.counts||typeof state.counts!=='object'||Array.isArray(state.counts)||Object.entries(state.counts).some(([k,day])=>!validDate(k)||!day||typeof day!=='object'||Array.isArray(day)||Object.entries(day).some(([id,v])=>id.length>80||!Number.isInteger(v)||v<0||v>100000))))return false;
+  if(state.timer?.practiceId!==undefined&&(typeof state.timer.practiceId!=='string'||state.timer.practiceId.length>120))return false;
   return Object.entries(state.done).every(
     ([key, val]) => key.length < 200 && typeof val === "boolean",
   );
