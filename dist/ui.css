@@ -671,10 +671,6 @@ svg.ic { display: inline-block; width: 1em; height: 1em; flex: none; fill: none;
 .hb-form input, .hb-form select { min-height: 36px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); font: inherit; font-size: 15px; }
 .hb-form input[type="number"] { width: 110px; }
 .hb-hint { flex: 1 0 100%; color: var(--ink-2); font-size: 12.5px; }
-.hb-add { flex: 1 0 100%; display: none; align-items: center; gap: 4px; margin: -6px 0 4px 46px; padding: 2px 0; border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 12.5px; cursor: pointer; text-align: left; }
-.hb-add svg { width: 13px; height: 13px; }
-.td-habit:hover .hb-add, .hb-add:focus-visible { display: inline-flex; }
-@media (hover: none) { .hb-add { display: inline-flex; opacity: .7; } }
 .bar-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
 .bar-btn:hover { border-color: var(--bc, var(--ink)); }
 .bar-btn.is-quiet { color: var(--ink-2); font-weight: 600; }
@@ -689,5 +685,5 @@ svg.ic { display: inline-block; width: 1em; height: 1em; flex: none; fill: none;
 .hb.is-running .hb-track { box-shadow: 0 0 0 3px color-mix(in srgb, var(--bc) 18%, transparent); }
 .hb .bar-btn { min-height: 32px; padding: 4px 12px; font-size: 13.5px; }
 .hb .bar-more { width: 32px; height: 32px; }
-@media (max-width: 520px) { .hb, .hb-setup { padding-left: 38px; } .hb-add { margin-left: 38px; } }
+@media (max-width: 520px) { .hb, .hb-setup { padding-left: 38px; } }
 .hb .bar-clock { color: var(--ink); }

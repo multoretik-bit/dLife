@@ -69,7 +69,7 @@ export function mountToday({ root, getState, save, onMessage }) {
   function hotbar(s, h) {
     const id = esc(h.id);
     if (hb?.id === h.id && hb.kind === "setup") return setupForm(h);
-    if (!h.progress) return `<button type="button" class="hb-add" data-hb-setup="${id}">${icon("plus")} шкала прогресса</button>`;
+    if (!h.progress) return ""; // без шкалы — строка привычки как раньше, без лишних кнопок
     const target = progressTarget(s, h), value = progressValue(s, h, { live: true }), pct = target ? Math.min(100, (value / target) * 100) : 0;
     const full = target && value >= target, running = h.progress.kind === "minutes" && s.timer?.practiceId === h.progress.practiceId;
     let actions;
